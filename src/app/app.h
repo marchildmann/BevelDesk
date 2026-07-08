@@ -72,6 +72,7 @@ struct AppState {
     bool display_props_open = false;
     bool display_props_opened_now = false;
     ImU32 display_props_pending = IM_COL32(0, 128, 128, 255);
+    ImU32 display_props_original = IM_COL32(0, 128, 128, 255); // for Cancel revert
 
     // Shut Down dialog
     bool shutdown_open = false;

@@ -21,6 +21,7 @@ void OpenDisplayProperties(AppState& app) {
     app.display_props_open = true;
     app.display_props_opened_now = true;
     app.display_props_pending = app.desktop_color;
+    app.display_props_original = app.desktop_color;   // revert target for Cancel
 }
 
 void DrawDisplayProperties(AppState& app) {
@@ -44,25 +45,29 @@ void DrawDisplayProperties(AppState& app) {
     c.max_size = dsz;
     app.display_props_opened_now = false;
 
+    bool ok_clicked = false;
     if (BeginWindow95(c)) {
         ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
         ImDrawList* dl = ImGui::GetWindowDrawList();
         ImVec2 cm = c.content_min;
         float cw = c.content_max.x - cm.x;
 
-        // ---- "Background" tab strip (raised tab over a page panel) ----
+        // ---- "Background" tab over a page panel ----
         float pad = 8;
-        ImVec2 page_mn(cm.x + pad, cm.y + 24);
+        ImVec2 page_mn(cm.x + pad, cm.y + 26);
         ImVec2 page_mx(c.content_max.x - pad, c.content_max.y - 44);
-        // the active tab: a raised nub whose bottom edge merges into the page
-        ImVec2 tab_mn(page_mn.x, cm.y + 6), tab_mx(page_mn.x + 84, page_mn.y + 2);
-        dl->AddRectFilled(tab_mn, tab_mx, FACE);
-        Edge(dl, tab_mn, ImVec2(tab_mx.x, page_mn.y), HILIGHT, SHADOW); // no bottom edge
-        dl->AddText(ImVec2(tab_mn.x + 10, tab_mn.y + 3), TEXT, "Background");
         WindowFrame(dl, page_mn, page_mx);
-        // paint over the seam so the tab looks connected to the page
-        dl->AddRectFilled(ImVec2(tab_mn.x + 2, page_mn.y - 1),
-                          ImVec2(tab_mx.x - 1, page_mn.y + 1), FACE);
+
+        // active tab: raised, top + left highlight, right shadow/black, NO bottom
+        // edge — it fills over the page's top border so the two read as joined.
+        ImVec2 tab_mn(page_mn.x + 6, cm.y + 6);
+        ImVec2 tab_mx(tab_mn.x + 90, page_mn.y + 2);   // extends 2px into the page
+        dl->AddRectFilled(tab_mn, tab_mx, FACE);       // covers page top border here
+        dl->AddRectFilled(tab_mn, ImVec2(tab_mx.x - 2, tab_mn.y + 1), HILIGHT);   // top
+        dl->AddRectFilled(tab_mn, ImVec2(tab_mn.x + 1, tab_mx.y), HILIGHT);       // left
+        dl->AddRectFilled(ImVec2(tab_mx.x - 2, tab_mn.y), ImVec2(tab_mx.x - 1, tab_mx.y), SHADOW);
+        dl->AddRectFilled(ImVec2(tab_mx.x - 1, tab_mn.y), ImVec2(tab_mx.x, tab_mx.y), DKSHADOW);
+        dl->AddText(ImVec2(tab_mn.x + 11, tab_mn.y + 4), TEXT, "Background");
 
         // ---- monitor preview, centered near the page top ----
         float mw = 118, mh = 84;
@@ -95,19 +100,28 @@ void DrawDisplayProperties(AppState& app) {
             if (kDesktopColors[i] == app.display_props_pending)
                 dl->AddRect(ImVec2(x - 3, y - 3), ImVec2(x + sw + 3, y + sw + 3),
                             BLACK, 0, 0, 2.0f);
-            if (clicked) app.display_props_pending = kDesktopColors[i];
+            if (clicked) {
+                app.display_props_pending = kDesktopColors[i];
+                app.desktop_color = kDesktopColors[i];   // live apply to the desktop
+            }
         }
 
         // ---- OK / Cancel, bottom-right, below the page ----
         float byy = c.content_max.y - 34;
         ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 2 * 75 - 16, byy));
         if (Button("OK")) {
-            app.desktop_color = app.display_props_pending;
+            app.desktop_color = app.display_props_pending;  // commit (already live)
             app.display_props_open = false;
+            ok_clicked = true;
         }
         ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 75 - 8, byy));
         if (Button("Cancel")) app.display_props_open = false;
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) app.display_props_open = false;
     }
     EndWindow95();
+
+    // closed by anything other than OK (Cancel / Esc / the X) reverts the
+    // live-previewed color back to what it was when the dialog opened
+    if (!app.display_props_open && !ok_clicked)
+        app.desktop_color = app.display_props_original;
 }
