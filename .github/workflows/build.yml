@@ -1,0 +1,84 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            name: macos-universal
+          - os: ubuntu-22.04
+            name: linux-x86_64
+          - os: windows-2022
+            name: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libgl1-mesa-dev xorg-dev
+
+      - name: Configure (macOS, universal binary)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Configure
+        if: runner.os != 'macOS'
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j 4
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd build
+          ditto -c -k --keepParent "BevelDesk.app" "BevelDesk-${{ github.ref_name }}-macos-universal.zip"
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf "build/BevelDesk-${{ github.ref_name }}-linux-x86_64.tar.gz" -C build beveldesk
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path build/Release/beveldesk.exe -DestinationPath "build/BevelDesk-${{ github.ref_name }}-windows-x86_64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BevelDesk-${{ matrix.name }}
+          path: |
+            build/BevelDesk-*.zip
+            build/BevelDesk-*.tar.gz
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            Prebuilt binaries for macOS (universal, unsigned — right-click ▸ Open
+            on first launch), Linux x86_64 (needs OpenGL/X11 runtime libs), and
+            Windows x86_64 (note: the MS-DOS Prompt is POSIX-only for now).
