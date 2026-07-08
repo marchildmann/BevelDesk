@@ -24,7 +24,7 @@ static const ImU32 kDesktopColors[16] = {
 static void DrawTab(ImDrawList* dl, float x, float w, float top_y, float page_top,
                     const char* label, bool active) {
     float t = active ? top_y : top_y + 2;               // inactive tops are lower
-    float b = active ? page_top + 2 : page_top;         // active covers the border
+    float b = active ? page_top + 1 : page_top;         // active merges into the page interior
     // fill, inset 1px at the top for the chamfered corners
     dl->AddRectFilled(ImVec2(x + 1, t), ImVec2(x + w - 1, b), FACE);
     dl->AddRectFilled(ImVec2(x, t + 1), ImVec2(x + w, b), FACE);
@@ -79,7 +79,16 @@ void DrawDisplayProperties(AppState& app) {
         float pad = 8;
         ImVec2 page_mn(cm.x + pad, cm.y + 28);
         ImVec2 page_mx(c.content_max.x - pad, c.content_max.y - 44);
-        WindowFrame(dl, page_mn, page_mx);
+        // tab-control page border: 1px white top/left (so the active tab's white
+        // left edge lines up exactly), 2px shadow/black bottom/right. The active
+        // tab overdraws the top border along its own width.
+        dl->AddRectFilled(page_mn, page_mx, FACE);
+        dl->AddRectFilled(page_mn, ImVec2(page_mx.x - 1, page_mn.y + 1), HILIGHT); // top
+        dl->AddRectFilled(page_mn, ImVec2(page_mn.x + 1, page_mx.y - 1), HILIGHT); // left
+        dl->AddRectFilled(ImVec2(page_mx.x - 2, page_mn.y), ImVec2(page_mx.x - 1, page_mx.y), SHADOW);
+        dl->AddRectFilled(ImVec2(page_mx.x - 1, page_mn.y), ImVec2(page_mx.x, page_mx.y), DKSHADOW);
+        dl->AddRectFilled(ImVec2(page_mn.x, page_mx.y - 2), ImVec2(page_mx.x, page_mx.y - 1), SHADOW);
+        dl->AddRectFilled(ImVec2(page_mn.x, page_mx.y - 1), ImVec2(page_mx.x, page_mx.y), DKSHADOW);
 
         static const char* tabs[] = { "Background", "Screen Saver", "Appearance", "Settings" };
         float tab_top = cm.y + 6;
