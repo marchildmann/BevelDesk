@@ -14,7 +14,9 @@ void AddTextBold(ImDrawList* dl, ImVec2 pos, ImU32 col, const char* text,
                  const ImVec4* clip = nullptr);
 
 // Classic push button. size {0,0} = auto from label (min 75x23, Win95 default).
-bool Button(const char* label, ImVec2 size = ImVec2(0, 0), bool forced_pressed = false);
+// enabled=false draws it grayed (embossed text) and ignores clicks.
+bool Button(const char* label, ImVec2 size = ImVec2(0, 0), bool forced_pressed = false,
+            bool enabled = true);
 
 // Win95 radio button (sunken circle + dot). Returns true when clicked.
 bool Radio(const char* label, bool selected);

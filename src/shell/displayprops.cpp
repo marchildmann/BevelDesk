@@ -132,16 +132,24 @@ void DrawDisplayProperties(AppState& app) {
             }
         }
 
-        // ---- OK / Cancel, bottom-right, below the page ----
+        // ---- OK / Cancel / Apply, bottom-right, below the page ----
+        // Apply enables once the preview differs from the last committed color;
+        // it commits (moving the Cancel-revert baseline) without closing.
+        bool changed = app.display_props_pending != app.display_props_original;
         float byy = c.content_max.y - 34;
-        ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 2 * 75 - 16, byy));
+        float bw = 75, bgap = 6;
+        float ax = c.content_max.x - bw;                 // Apply (rightmost)
+        ImGui::SetCursorScreenPos(ImVec2(ax - 2 * (bw + bgap), byy));
         if (Button("OK")) {
             app.desktop_color = app.display_props_pending;  // commit (already live)
             app.display_props_open = false;
             ok_clicked = true;
         }
-        ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 75 - 8, byy));
+        ImGui::SetCursorScreenPos(ImVec2(ax - (bw + bgap), byy));
         if (Button("Cancel")) app.display_props_open = false;
+        ImGui::SetCursorScreenPos(ImVec2(ax, byy));
+        if (Button("Apply", ImVec2(0, 0), false, changed))
+            app.display_props_original = app.display_props_pending;  // move revert baseline
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) app.display_props_open = false;
     }
     EndWindow95();

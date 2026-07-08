@@ -16,19 +16,26 @@ void AddTextBold(ImDrawList* dl, ImVec2 pos, ImU32 col, const char* text,
     }
 }
 
-bool Button(const char* label, ImVec2 size, bool forced_pressed) {
+bool Button(const char* label, ImVec2 size, bool forced_pressed, bool enabled) {
     ImVec2 ts = ImGui::CalcTextSize(label, nullptr, true);
     if (size.x <= 0) size.x = (ts.x + 24 < 75) ? 75 : ts.x + 24;
     if (size.y <= 0) size.y = 23;
     ImVec2 p = ImGui::GetCursorScreenPos();
     bool clicked = ImGui::InvisibleButton(label, size);
-    bool pressed = forced_pressed || (ImGui::IsItemActive() && ImGui::IsItemHovered());
+    if (!enabled) clicked = false;
+    bool pressed = enabled && (forced_pressed || (ImGui::IsItemActive() && ImGui::IsItemHovered()));
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 mx(p.x + size.x, p.y + size.y);
     if (pressed) BevelPressed(dl, p, mx); else BevelRaised(dl, p, mx);
     float off = pressed ? 1.0f : 0.0f;
-    dl->AddText(ImVec2(p.x + (size.x - ts.x) * 0.5f + off, p.y + (size.y - ts.y) * 0.5f + off),
-                TEXT, label);
+    ImVec2 tp(p.x + (size.x - ts.x) * 0.5f + off, p.y + (size.y - ts.y) * 0.5f + off);
+    if (enabled) {
+        dl->AddText(tp, TEXT, label);
+    } else {
+        // Win95 disabled label: gray with a white emboss offset +1,+1
+        dl->AddText(ImVec2(tp.x + 1, tp.y + 1), HILIGHT, label);
+        dl->AddText(tp, GRAYTEXT, label);
+    }
     return clicked;
 }
 
