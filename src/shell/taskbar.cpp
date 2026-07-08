@@ -15,6 +15,20 @@ using namespace t95;
 
 // ---- start menu -------------------------------------------------------------
 
+// Draw text rotated 90° CCW (reads bottom-to-top, like the Win95 sidebar).
+// ImDrawList can't rotate text, but we can rotate the glyph vertices after
+// submission: pivot = the bottom-left of the vertical text run.
+static void AddTextBottomUp(ImDrawList* dl, ImFont* font, ImVec2 pivot,
+                            ImU32 col, const char* text) {
+    int vtx_start = dl->VtxBuffer.Size;
+    dl->AddText(font, 0.0f, pivot, col, text);
+    for (int i = vtx_start; i < dl->VtxBuffer.Size; ++i) {
+        ImDrawVert& v = dl->VtxBuffer.Data[i];
+        float dx = v.pos.x - pivot.x, dy = v.pos.y - pivot.y;
+        v.pos = ImVec2(pivot.x + dy, pivot.y - dx);
+    }
+}
+
 static void DrawStartMenu(AppState& app, float taskbar_top) {
     if (!app.start_open) return;
 
@@ -51,10 +65,14 @@ static void DrawStartMenu(AppState& app, float taskbar_top) {
     ImVec2 mx(mn.x + width, mn.y + height);
     BevelRaised(dl, mn, mx);
 
-    // navy sidebar band with "Windows95" flavor
+    // navy sidebar band with vertical brand text, like the original's "Windows95"
     ImVec2 side_mn(mn.x + 3, mn.y + 3), side_mx(mn.x + 3 + side_w, mx.y - 3);
     dl->AddRectFilled(side_mn, side_mx, NAVY);
-    dl->AddText(ImVec2(side_mn.x + 4, side_mx.y - 18), TITLE_TEXT, "95");
+    ImFont* brand_font = FontBold ? FontBold : ImGui::GetFont();
+    float fh = brand_font->FontSize;
+    AddTextBottomUp(dl, brand_font,
+                    ImVec2(side_mn.x + (side_w - fh) * 0.5f, side_mx.y - 6),
+                    TITLE_TEXT, "BevelDesk");
 
     float y = mn.y + 3;
     for (const Item& it : items) {
