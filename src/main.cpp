@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
         ImGui_ImplGlfw_NewFrame();
 
         // apply zoom: shrink the logical display so fixed-pixel UI is magnified,
-        // and map the cursor back into logical space (must run before NewFrame)
+        // and map the cursor back into logical space (must run before NewFrame).
         if (g_app.zoom != 1.0f) {
             float Z = g_app.zoom, R = screenshot_mode ? 1.0f : pixel_ratio();
             int ww, wh;
@@ -153,7 +153,14 @@ int main(int argc, char** argv) {
             if (screenshot_mode) { ww = win_w; wh = win_h; }
             io.DisplaySize = ImVec2(ww / Z, wh / Z);
             io.DisplayFramebufferScale = ImVec2(R * Z, R * Z);
-            if (io.MousePos.x > -1e30f) { io.MousePos.x /= Z; io.MousePos.y /= Z; }
+            // 1.92 input is event-based: the GLFW backend already queued the raw
+            // cursor position, and NewFrame would overwrite any io.MousePos we
+            // set. Queue a corrected event *after* the backend's so it wins.
+            if (!screenshot_mode && glfwGetWindowAttrib(window, GLFW_HOVERED)) {
+                double mx, my;
+                glfwGetCursorPos(window, &mx, &my);
+                io.AddMousePosEvent((float)(mx / Z), (float)(my / Z));
+            }
         }
 
         ImGui::NewFrame();
