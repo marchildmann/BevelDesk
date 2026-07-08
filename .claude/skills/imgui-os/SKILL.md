@@ -125,6 +125,30 @@ Reference images beat memory for chrome this exact.
 - Ctrl+Q / Ctrl+C etc. must reach a focused terminal — global shortcuts check
   `dos_focused` first.
 
+## WebAssembly / Emscripten build
+
+`emcmake cmake -S . -B build-web && cmake --build build-web` → index.{html,js,
+wasm,data}. CI builds + deploys to GitHub Pages (pages.yml). Everything is
+`#ifdef __EMSCRIPTEN__` in the native source; `web/` has the HTML shell,
+DejaVu fonts, and a mock filesystem. Hard-won gotchas:
+- **Main loop** must be a callback (`emscripten_set_main_loop_arg`), not a
+  blocking while — the browser owns frame timing. Extracted into
+  `MainLoopFrame(void*)`; native calls it in a loop.
+- **Blank canvas** = the #1 symptom. Fix: `ImGui_ImplGlfw_InstallEmscripten
+  Callbacks(window, "#canvas")` after InitForOpenGL — without it
+  glfwGetFramebufferSize is 0 and nothing draws (only the teal glClear shows).
+- **TextDecoder crash in ___syscall_openat** (opening the font): a growable
+  heap (`ALLOW_MEMORY_GROWTH`) is a *resizable* ArrayBuffer, which recent
+  Chrome's TextDecoder.decode() rejects. Use a fixed `-sINITIAL_MEMORY`
+  instead. (Emscripten 6 removed the `-sTEXTDECODER=0` escape hatch.)
+- WebGL2 = GLES3: `#version 300 es` shaders, `<GLES3/gl3.h>`, `-sFULL_ES3=1
+  -sMIN/MAX_WEBGL_VERSION=2`. GLFW comes from `-sUSE_GLFW=3` (don't fetch it).
+- No fonts/pty in the browser: preload DejaVu via `--preload-file`; pty.cpp
+  guards `!defined(__EMSCRIPTEN__)` so the DOS prompt no-ops.
+- Headless Chrome CANNOT verify web rendering here (WebGL+rAF won't run under
+  --virtual-time-budget) — but init errors DO show in the console, so grep
+  the headless log for aborts/TextDecoder. Real rendering needs a real browser.
+
 ## Docs contract
 
 PLAN.md = research (don't rewrite history). DECISIONS.md = numbered choices —
