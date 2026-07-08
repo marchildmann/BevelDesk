@@ -1,0 +1,18 @@
+# build output
+build/
+cmake-build-*/
+out/
+*.o
+*.obj
+
+# IDE / tooling
+.vscode/
+.idea/
+.cache/
+compile_commands.json
+
+# macOS
+.DS_Store
+
+# runtime junk
+imgui.ini
