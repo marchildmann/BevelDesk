@@ -83,6 +83,24 @@ src/platform/   fonts, pty (forkpty), GL textures, screenshots
    (imgui_internal.h) every frame; desktop uses `NoBringToFrontOnFocus`.
 6. Custom chrome text: `dl->AddText` with explicit clip ImVec4; bold via
    `t95::AddTextBold` (real bold font or 1px overdraw fallback).
+7. **Adjacent hand-drawn borders must share edge WEIGHT and COLOR, or the
+   1px seam shows.** When two beveled shapes touch (tab↔page, groupbox↔frame),
+   don't mix a 2px `WindowFrame` (outer #DFDFDF / inner #FFFFFF) against a
+   1px pure-white edge — at the join one "white" line sits at #DFDFDF and the
+   other at #FFFFFF and they visibly step. Fix: give both the SAME border
+   recipe (Win95 tab pages use 1px HILIGHT top/left + 2px SHADOW/DKSHADOW
+   bottom/right — NOT WindowFrame), and let the raised element overdraw the
+   shared border along its own width so the fills merge (FACE→FACE, no seam).
+
+## Debugging pixel-alignment gripes (the method that works)
+
+When the user says "this border/line doesn't match," don't guess from the
+full screenshot — **crop-zoom the exact junction 8–9x** with the stdlib PNG
+tool (scratchpad/pngtool.py: `<src> <dst> x y w h zoom`) and read the
+individual pixels. The bug is almost always a 1px color/position mismatch
+between two independently-drawn primitives (e.g. tab edge vs page edge). Then
+compare against a real Win95 reference the user provides, pixel row by pixel row.
+Reference images beat memory for chrome this exact.
 
 ## MS-DOS Prompt / pty specifics
 
