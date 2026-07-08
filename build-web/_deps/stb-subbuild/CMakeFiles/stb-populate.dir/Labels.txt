@@ -1,0 +1,14 @@
+# Target labels
+ stb-populate
+# Source files and their labels
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/CMakeFiles/stb-populate
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/CMakeFiles/stb-populate.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/CMakeFiles/stb-populate-complete.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-build.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-configure.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-download.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-install.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-mkdir.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-patch.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-test.rule
+/Users/marc/Code/ImGUI_OS/build-web/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-update.rule

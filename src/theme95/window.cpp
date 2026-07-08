@@ -58,7 +58,10 @@ bool BeginWindow95(Chrome& c) {
     const float B = WIN_BORDER;
     ImVec2 tmin(pos.x + B, pos.y + B);
     ImVec2 tmax(pmax.x - B, pos.y + B + TITLEBAR_H);
-    dl->AddRectFilled(tmin, tmax, c.focused ? TITLE_ACT : TITLE_INACT);
+    // horizontal caption gradient (dark at the left, bright at the right)
+    ImU32 g0 = c.focused ? TITLE_ACT : TITLE_INACT;
+    ImU32 g1 = c.focused ? TITLE_ACT2 : TITLE_INACT2;
+    dl->AddRectFilledMultiColor(tmin, tmax, g0, g1, g1, g0);
 
     // mini icon + bold title text (clipped before the buttons)
     float text_x = tmin.x + 4;

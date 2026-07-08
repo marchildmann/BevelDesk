@@ -16,7 +16,9 @@ static bool FileExists(const char* path) {
 
 void LoadFonts(ImGuiIO& io, float density) {
     static const char* regular[] = {
-#if defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+        "/fonts/DejaVuSans.ttf",             // preloaded into MEMFS at build time
+#elif defined(__APPLE__)
         "/System/Library/Fonts/Supplemental/Tahoma.ttf",
         "/System/Library/Fonts/Supplemental/Verdana.ttf",
         "/System/Library/Fonts/Supplemental/Arial.ttf",
@@ -31,7 +33,9 @@ void LoadFonts(ImGuiIO& io, float density) {
 #endif
     };
     static const char* bold[] = {
-#if defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+        "/fonts/DejaVuSans-Bold.ttf",
+#elif defined(__APPLE__)
         "/System/Library/Fonts/Supplemental/Tahoma Bold.ttf",
         "/System/Library/Fonts/Supplemental/Verdana Bold.ttf",
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
@@ -51,7 +55,9 @@ void LoadFonts(ImGuiIO& io, float density) {
     cfg.PixelSnapH = true;
     cfg.RasterizerDensity = density > 1.0f ? density : 1.0f;
     static const char* mono[] = {
-#if defined(__APPLE__)
+#if defined(__EMSCRIPTEN__)
+        "/fonts/DejaVuSansMono.ttf",
+#elif defined(__APPLE__)
         "/System/Library/Fonts/Monaco.ttf",
         "/System/Library/Fonts/Menlo.ttc",
         "/System/Library/Fonts/Supplemental/Courier New.ttf",

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>BevelDesk — a Windows 95 desktop in Dear ImGui</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%; background: #008080;
+    font-family: Tahoma, Geneva, sans-serif; overflow: hidden;
+  }
+  #wrap { position: fixed; inset: 0; display: flex; }
+  canvas.emscripten {
+    display: block; width: 100%; height: 100%;
+    image-rendering: pixelated; outline: none;
+  }
+  #boot {
+    position: fixed; inset: 0; background: #008080; color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 10; transition: opacity .4s ease; font-size: 14px;
+  }
+  #boot .mark { display: grid; grid-template-columns: 26px 26px; gap: 3px; margin-bottom: 18px; }
+  #boot .mark div { width: 26px; height: 26px; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #000; }
+  #boot .t { background: #008080; } #boot .f { background: #c0c0c0; }
+  #boot h1 { font-size: 22px; margin: 0 0 6px; font-weight: bold; }
+  #boot p { margin: 2px; opacity: .85; }
+  #boot .bar { width: 220px; height: 14px; margin-top: 16px; background: #c0c0c0;
+    box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff; padding: 2px; }
+  #boot .bar i { display: block; height: 100%; width: 0; background: #000080;
+    transition: width .3s; }
+</style>
+</head>
+<body>
+  <div id="boot">
+    <div class="mark"><div class="t"></div><div class="f"></div><div class="f"></div><div class="f"></div></div>
+    <h1>BevelDesk</h1>
+    <p>A Windows&nbsp;95&ndash;style desktop, hand-drawn in Dear ImGui.</p>
+    <p style="opacity:.6">Loading WebAssembly&hellip;</p>
+    <div class="bar"><i id="bootbar"></i></div>
+  </div>
+  <div id="wrap">
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  </div>
+  <script type="text/javascript">
+    var bar = document.getElementById('bootbar');
+    var Module = {
+      canvas: (function () {
+        var c = document.getElementById('canvas');
+        c.addEventListener('webglcontextlost', function (e) {
+          alert('WebGL context lost. Please reload.'); e.preventDefault();
+        }, false);
+        return c;
+      })(),
+      setStatus: function (text) {
+        var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+        if (m) bar.style.width = (100 * (+m[2]) / (+m[4])) + '%';
+        else if (bar) bar.style.width = text ? '20%' : '100%';
+      },
+      onRuntimeInitialized: function () {
+        var boot = document.getElementById('boot');
+        // size the canvas to the window and keep it in sync
+        function fit() {
+          var c = Module.canvas, r = window.devicePixelRatio || 1;
+          c.width = Math.floor(window.innerWidth * r);
+          c.height = Math.floor(window.innerHeight * r);
+          c.style.width = window.innerWidth + 'px';
+          c.style.height = window.innerHeight + 'px';
+        }
+        window.addEventListener('resize', fit);
+        fit();
+        setTimeout(function () { boot.style.opacity = '0';
+          setTimeout(function () { boot.style.display = 'none'; }, 450); }, 350);
+      }
+    };
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

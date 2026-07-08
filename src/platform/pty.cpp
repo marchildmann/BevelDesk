@@ -1,6 +1,8 @@
 #include "platform/pty.h"
 
-#ifndef _WIN32
+// Real pty needs forkpty — POSIX only, and NOT the browser (Emscripten has no
+// fork/pty). Windows and WASM get the no-op stubs at the bottom.
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
 
 #include <cerrno>
 #include <cstdlib>
