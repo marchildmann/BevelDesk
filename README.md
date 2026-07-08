@@ -1,5 +1,9 @@
 # BevelDesk
 
+[![build](https://github.com/marchildmann/BevelDesk/actions/workflows/build.yml/badge.svg)](https://github.com/marchildmann/BevelDesk/actions/workflows/build.yml)
+[![release](https://img.shields.io/github/v/release/marchildmann/BevelDesk)](https://github.com/marchildmann/BevelDesk/releases/latest)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 **A Windows 95–style desktop environment that actually works — built entirely
 with Dear ImGui's DrawList API.**
 
@@ -36,6 +40,17 @@ ImGui styling, no image assets, no web views.
 - **Crisp on Retina** — native-resolution rendering with the UI font
   (Tahoma / Microsoft Sans Serif / DejaVu, probed from your system)
   rasterized at monitor density. Fixed 96-dpi metrics, like the original.
+
+## Download
+
+Prebuilt binaries for every release are on the
+[Releases page](https://github.com/marchildmann/BevelDesk/releases/latest):
+
+- **macOS** — universal (Apple silicon + Intel) `BevelDesk.app`. Unsigned:
+  right-click ▸ Open on first launch, or
+  `xattr -d com.apple.quarantine BevelDesk.app`.
+- **Linux x86_64** — needs OpenGL and X11/Wayland runtime libraries.
+- **Windows x86_64** — note: the MS-DOS Prompt is POSIX-only for now.
 
 ## Building
 
