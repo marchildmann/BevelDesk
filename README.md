@@ -39,9 +39,9 @@ ImGui styling, no image assets, no web views.
   Documents / Find (Explorer), Settings (Display Properties), Help (About),
   Run… (a real Run box — type a folder to open it, or a command to run in a
   DOS prompt), Shut Down… (the iconic dithered screen-fade dialog).
-- **UI zoom** — Ctrl/Cmd `+` / `-` / `0` scales the whole desktop through
-  1×–3×, with fonts re-rasterized at each level so text stays crisp (no
-  bitmap blur). Handy on 4K/5K displays.
+- **UI zoom** — **Ctrl/Cmd + mouse-wheel** (or `+` / `-` / `0` on a US
+  keyboard) scales the whole desktop through 1×–3×, with fonts re-rasterized
+  at each level so text stays crisp (no bitmap blur). Handy on 4K/5K displays.
 - **Display Properties** (Start ▸ Settings) — recolor the desktop from the
   classic 16-color picker, with a live monitor preview, OK/Cancel semantics
   included.

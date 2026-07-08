@@ -169,6 +169,36 @@ int main(int argc, char** argv) {
 
         ImGui::NewFrame();
 
+        // ---- zoom input: Ctrl/Cmd + mouse-wheel (layout-independent) or +/-/0.
+        // Handled here, before the UI draws, so a modifier+wheel zooms instead
+        // of scrolling the list under the cursor.
+        {
+            static const float steps[] = { 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f };
+            const int nz = (int)(sizeof(steps) / sizeof(steps[0]));
+            bool mod = io.KeyCtrl || io.KeySuper;
+            bool dos_focus = false;
+            for (auto& d : g_app.dos_wins)
+                if (d->focused && !d->minimized) dos_focus = true;
+            int cur = 0;
+            for (int k = 0; k < nz; ++k) if (steps[k] <= g_app.zoom + 0.01f) cur = k;
+            int dir = 0;
+            if (mod && io.MouseWheel > 0.1f) dir = 1;
+            else if (mod && io.MouseWheel < -0.1f) dir = -1;
+            if (mod && io.MouseWheel != 0.0f) io.MouseWheel = 0.0f; // don't scroll lists
+            if (mod && !dos_focus) {
+                if (ImGui::IsKeyPressed(ImGuiKey_Equal, false) ||
+                    ImGui::IsKeyPressed(ImGuiKey_KeypadAdd, false)) dir = 1;
+                else if (ImGui::IsKeyPressed(ImGuiKey_Minus, false) ||
+                         ImGui::IsKeyPressed(ImGuiKey_KeypadSubtract, false)) dir = -1;
+                else if (ImGui::IsKeyPressed(ImGuiKey_0, false) ||
+                         ImGui::IsKeyPressed(ImGuiKey_Keypad0, false)) {
+                    if (g_app.zoom != 1.0f) { g_app.zoom = 1.0f; g_app.zoom_dirty = true; }
+                }
+            }
+            if (dir > 0 && cur < nz - 1) { g_app.zoom = steps[cur + 1]; g_app.zoom_dirty = true; }
+            else if (dir < 0 && cur > 0) { g_app.zoom = steps[cur - 1]; g_app.zoom_dirty = true; }
+        }
+
         // --demo sysmenu: pop the system menu on the focused explorer
         if (screenshot_mode && demo && std::strcmp(demo, "sysmenu") == 0 && frame == 3 &&
             !g_app.wins.empty())
@@ -209,24 +239,6 @@ int main(int argc, char** argv) {
         // Cmd+M minimizes the host window to the Dock (borderless has no button)
         if (io.KeySuper && ImGui::IsKeyPressed(ImGuiKey_M, false))
             glfwIconifyWindow(window);
-
-        // Ctrl/Cmd +/-/0 : UI zoom, stepping through fixed levels
-        if ((io.KeySuper || io.KeyCtrl) && !dos_focused) {
-            static const float steps[] = { 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f };
-            const int n = (int)(sizeof(steps) / sizeof(steps[0]));
-            int cur = 0;
-            for (int k = 0; k < n; ++k) if (steps[k] <= g_app.zoom + 0.01f) cur = k;
-            if (ImGui::IsKeyPressed(ImGuiKey_Equal, false) ||
-                ImGui::IsKeyPressed(ImGuiKey_KeypadAdd, false)) {
-                if (cur < n - 1) { g_app.zoom = steps[cur + 1]; g_app.zoom_dirty = true; }
-            } else if (ImGui::IsKeyPressed(ImGuiKey_Minus, false) ||
-                       ImGui::IsKeyPressed(ImGuiKey_KeypadSubtract, false)) {
-                if (cur > 0) { g_app.zoom = steps[cur - 1]; g_app.zoom_dirty = true; }
-            } else if (ImGui::IsKeyPressed(ImGuiKey_0, false) ||
-                       ImGui::IsKeyPressed(ImGuiKey_Keypad0, false)) {
-                if (g_app.zoom != 1.0f) { g_app.zoom = 1.0f; g_app.zoom_dirty = true; }
-            }
-        }
         if (g_app.quit_requested) glfwSetWindowShouldClose(window, GLFW_TRUE);
 
         ImGui::Render();
