@@ -77,7 +77,12 @@ src/platform/   fonts, pty (forkpty), GL textures, screenshots
    `RasterizerDensity` = pixel ratio; `--screenshot` forces 1x
    (`GLFW_COCOA_RETINA_FRAMEBUFFER=FALSE`) for deterministic 1024x768 PNGs.
    Zoom = shrink `io.DisplaySize` by Z, set `DisplayFramebufferScale` =
-   ratio*Z, divide `io.MousePos` by Z (all BEFORE `NewFrame`). On **1.92**
+   ratio*Z. **Mouse must be scaled via the event queue, not io.MousePos:**
+   input is event-based since 1.87, so the GLFW backend queues the raw cursor
+   pos and `NewFrame` overwrites any `io.MousePos` you set pre-NewFrame (looks
+   fine in screenshots, breaks live). Fix: after the backend's NewFrame, call
+   `io.AddMousePosEvent(cursor.x/Z, cursor.y/Z)` (gated on `GLFW_HOVERED` so
+   the mouse-left event survives) — the later event wins. On **1.92**
    fonts rebake crisply from FramebufferScale automatically — do NOT rebuild
    the atlas (a mid-loop `io.Fonts->Clear()` SIGSEGVs). `ImFont::FontSize`
    and `ImGui_ImplOpenGL3_*FontsTexture` are gone in 1.92 — use
