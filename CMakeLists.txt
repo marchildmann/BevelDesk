@@ -18,7 +18,7 @@ FetchContent_Declare(glfw
   URL https://github.com/glfw/glfw/archive/refs/tags/3.4.tar.gz
 )
 FetchContent_Declare(imgui
-  URL https://github.com/ocornut/imgui/archive/refs/tags/v1.91.9b.tar.gz
+  URL https://github.com/ocornut/imgui/archive/refs/tags/v1.92.8.tar.gz
 )
 FetchContent_Declare(stb
   GIT_REPOSITORY https://github.com/nothings/stb.git

@@ -73,9 +73,16 @@ src/platform/   fonts, pty (forkpty), GL textures, screenshots
    silently desyncs (scrollbar appeared late, under-scrolled). Push
    `ItemSpacing (0,0)` around manually-measured item stacks; 17px unpadded
    rows are also the authentic Win95 list density.
-3. **Retina**: interactive mode uses native framebuffer + `RasterizerDensity` =
-   content scale; `--screenshot` forces 1x (`GLFW_COCOA_RETINA_FRAMEBUFFER=FALSE`)
-   for deterministic 1024x768 PNGs. Don't mix these up.
+3. **Retina / zoom**: interactive mode uses native framebuffer + font
+   `RasterizerDensity` = pixel ratio; `--screenshot` forces 1x
+   (`GLFW_COCOA_RETINA_FRAMEBUFFER=FALSE`) for deterministic 1024x768 PNGs.
+   Zoom = shrink `io.DisplaySize` by Z, set `DisplayFramebufferScale` =
+   ratio*Z, divide `io.MousePos` by Z (all BEFORE `NewFrame`). On **1.92**
+   fonts rebake crisply from FramebufferScale automatically — do NOT rebuild
+   the atlas (a mid-loop `io.Fonts->Clear()` SIGSEGVs). `ImFont::FontSize`
+   and `ImGui_ImplOpenGL3_*FontsTexture` are gone in 1.92 — use
+   `ImGui::GetFontSize()`. After any ImGui tag bump, `rm -rf build` (stale
+   .o files silently hide API breaks).
 4. Fonts are system-probed at runtime (Tahoma/micross/DejaVu + bold + mono for
    the terminal) in platform.cpp — never ship font files, never use default
    ProggyClean for UI (monospaced = wrong spacing).

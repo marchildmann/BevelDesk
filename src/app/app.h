@@ -67,9 +67,8 @@ struct AppState {
     bool quit_requested = false;
     int desktop_selected = -1;            // 0 = My Computer, 1 = Recycle Bin
 
-    // UI zoom (Ctrl/Cmd +/-/0). Fonts re-rasterize on change for crisp text.
+    // UI zoom (Ctrl/Cmd + wheel, or +/-/0). 1.92 dynamic fonts rebake crisply.
     float zoom = 1.0f;
-    bool zoom_dirty = false;
 
     // desktop appearance
     ImU32 desktop_color = IM_COL32(0, 128, 128, 255);   // the teal, changeable

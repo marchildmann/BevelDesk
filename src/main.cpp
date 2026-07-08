@@ -103,16 +103,16 @@ int main(int argc, char** argv) {
     io.IniFilename = nullptr;                       // deterministic layout
     io.ConfigWindowsMoveFromTitleBarOnly = true;    // we drag via our own caption
     t95::ApplyStyle();
-    // base rasterization density = framebuffer/window ratio (2 on Retina).
-    // Fonts are rasterized at base_density * zoom so text stays crisp zoomed.
+    // framebuffer/window ratio (2 on Retina). On 1.92, dynamic fonts rebake at
+    // whatever density DisplayFramebufferScale implies, so zoom stays crisp
+    // with no manual atlas rebuild.
     auto pixel_ratio = [&]() {
         int ww = 1, wh = 1, fw = 1, fh = 1;
         glfwGetWindowSize(window, &ww, &wh);
         glfwGetFramebufferSize(window, &fw, &fh);
         return (ww > 0) ? (float)fw / ww : 1.0f;
     };
-    float base_density = screenshot_mode ? 1.0f : pixel_ratio();
-    LoadFonts(io, base_density * g_app.zoom);
+    LoadFonts(io, screenshot_mode ? 1.0f : pixel_ratio());
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 150");
@@ -140,17 +140,6 @@ int main(int argc, char** argv) {
     int frame = 0;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-
-        // rebuild the font atlas at the new density when the zoom changed, so
-        // glyphs are re-rasterized crisp rather than bitmap-upscaled
-        if (g_app.zoom_dirty) {
-            io.Fonts->Clear();
-            t95::FontBold = nullptr; t95::FontMono = nullptr;
-            LoadFonts(io, base_density * g_app.zoom);
-            ImGui_ImplOpenGL3_DestroyFontsTexture();
-            ImGui_ImplOpenGL3_CreateFontsTexture();
-            g_app.zoom_dirty = false;
-        }
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -192,11 +181,11 @@ int main(int argc, char** argv) {
                          ImGui::IsKeyPressed(ImGuiKey_KeypadSubtract, false)) dir = -1;
                 else if (ImGui::IsKeyPressed(ImGuiKey_0, false) ||
                          ImGui::IsKeyPressed(ImGuiKey_Keypad0, false)) {
-                    if (g_app.zoom != 1.0f) { g_app.zoom = 1.0f; g_app.zoom_dirty = true; }
+                    g_app.zoom = 1.0f;
                 }
             }
-            if (dir > 0 && cur < nz - 1) { g_app.zoom = steps[cur + 1]; g_app.zoom_dirty = true; }
-            else if (dir < 0 && cur > 0) { g_app.zoom = steps[cur - 1]; g_app.zoom_dirty = true; }
+            if (dir > 0 && cur < nz - 1) g_app.zoom = steps[cur + 1];
+            else if (dir < 0 && cur > 0) g_app.zoom = steps[cur - 1];
         }
 
         // --demo sysmenu: pop the system menu on the focused explorer

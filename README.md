@@ -63,7 +63,7 @@ Prebuilt binaries for every release are on the
 ## Building
 
 Requirements: CMake ≥ 3.16, a C++17 compiler, network on first configure
-(dependencies fetched via FetchContent: GLFW 3.4, Dear ImGui 1.91.9b, stb).
+(dependencies fetched via FetchContent: GLFW 3.4, Dear ImGui 1.92.8, stb).
 
 ### macOS
 

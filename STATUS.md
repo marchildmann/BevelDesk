@@ -54,10 +54,10 @@
   Explorer, Settings→Display Properties, Help→About, Run…→Run box, Shut Down).
   The menu bar (File/Edit/View/Help) is still decorative; no context menus.
   The chosen desktop color / zoom level are session-only (no config file yet).
-- UI zoom (Ctrl/Cmd +/-/0, 1x–3x): the logical display is shrunk so the
-  fixed-pixel UI magnifies, the cursor is mapped back to logical space, and
-  the font atlas is rebuilt at base_density*zoom for crisp glyphs. On 1.92+
-  this would be even simpler (dynamic fonts) — a future upgrade.
+- UI zoom (Ctrl/Cmd + wheel or +/-/0, 1x–3x): the logical display is shrunk
+  so the fixed-pixel UI magnifies and the cursor is mapped back to logical
+  space. On ImGui 1.92 dynamic fonts rebake crisply from the framebuffer
+  scale automatically — no manual atlas rebuild needed.
 - MS-DOS Prompt: POSIX only (Windows needs ConPTY); no scroll regions or
   full alt-screen, so full-screen TUIs (vim, htop) render imperfectly —
   line-oriented shell work is solid. No clipboard paste yet; fixed 80x25.

@@ -73,7 +73,7 @@ static void DrawStartMenu(AppState& app, float taskbar_top) {
     ImVec2 side_mn(mn.x + 3, mn.y + 3), side_mx(mn.x + 3 + side_w, mx.y - 3);
     dl->AddRectFilled(side_mn, side_mx, NAVY);
     ImFont* brand_font = FontBold ? FontBold : ImGui::GetFont();
-    float fh = brand_font->FontSize;
+    float fh = ImGui::GetFontSize();   // 1.92: ImFont has no fixed FontSize field
     AddTextBottomUp(dl, brand_font,
                     ImVec2(side_mn.x + (side_w - fh) * 0.5f, side_mx.y - 6),
                     TITLE_TEXT, "BevelDesk");

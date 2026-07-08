@@ -34,7 +34,8 @@ Ambiguities resolved autonomously during the mission.
 8. **Screenshot mode** uses a hidden 1024×768 window, renders 10 frames,
    reads the back buffer. Pre-opens one Explorer window (at `/`) so the
    screenshot demonstrates window chrome + listview.
-9. **Dependencies pinned**: GLFW 3.4, ImGui v1.91.9b (pre-1.92 font rework)
+9. **Dependencies pinned**: GLFW 3.4, ImGui v1.92.8 (dynamic-font system —
+   see #13d; originally pinned to pre-1.92 v1.91.9b, upgraded for crisp zoom)
    via release tarballs; stb via shallow master clone (stb has no releases).
 10. **Start menu items** other than "Shut Down…" (which exits the app) are
     decorative and just close the menu.
@@ -42,13 +43,20 @@ Ambiguities resolved autonomously during the mission.
     deterministic for screenshots.
 12. **Window title of `/` is "My Computer"**-less: titles show the folder
     name (or the full path at the root). Simpler and predictable.
-13d. **Zoom on 1.91 via projection + atlas rebuild** (prompted by @ocornut's
-    feedback). We're pinned to 1.91.9b (DECISIONS #9). Rather than the risky
-    1.92 font-system upgrade (untested on Linux/Windows here), zoom is done
-    by shrinking io.DisplaySize by Z (fixed-pixel UI magnifies), setting
-    DisplayFramebufferScale = pixel_ratio*Z, dividing MousePos by Z, and
-    rebuilding the font atlas at base_density*Z so glyphs stay crisp. Upgrade
-    to 1.92 (dynamic fonts) remains the cleaner long-term path.
+13d. **Zoom via projection; upgraded to ImGui 1.92.8 for dynamic fonts**
+    (prompted by @ocornut's feedback). Zoom shrinks io.DisplaySize by Z (the
+    fixed-pixel hand-drawn UI magnifies), sets DisplayFramebufferScale =
+    pixel_ratio*Z, and divides MousePos by Z. On **1.92** the font atlas
+    rebakes glyphs on demand at the density DisplayFramebufferScale implies,
+    so text stays crisp with NO manual atlas rebuild (1.91 needed a
+    Clear()+re-load each zoom step). Input: Ctrl/Cmd + mouse-wheel
+    (layout-independent) or +/-/0.
+    Migration notes (1.91.9b → 1.92.8): `ImFont::FontSize` field was removed
+    (use `ImGui::GetFontSize()`); `ImGui_ImplOpenGL3_Create/DestroyFontsTexture`
+    are gone (dynamic-texture backend manages uploads); a mid-loop
+    `io.Fonts->Clear()` now SIGSEGVs — don't rebuild, rely on dynamic rebake.
+    Watch for stale object files masking API breaks: do a clean `rm -rf build`
+    after the tag bump or you'll compile main.cpp against the old headers.
 13c. **Windowed by default** (revised twice per user feedback). macOS rounds
     the corners of titled windows, which breaks the Win95 illusion — but a
     surprise fullscreen takeover on launch is worse. Default is a normal
