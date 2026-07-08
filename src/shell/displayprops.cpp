@@ -27,7 +27,7 @@ void DrawDisplayProperties(AppState& app) {
     if (!app.display_props_open) return;
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    ImVec2 dsz(300, 232);
+    ImVec2 dsz(310, 340);
     ImVec2 dpos(vp->Pos.x + (vp->Size.x - dsz.x) * 0.5f,
                 vp->Pos.y + (vp->Size.y - dsz.y) * 0.5f - 30);
     Chrome c;
@@ -50,26 +50,40 @@ void DrawDisplayProperties(AppState& app) {
         ImVec2 cm = c.content_min;
         float cw = c.content_max.x - cm.x;
 
-        // monitor preview, Win95 Display Properties style
-        float mw = 110, mh = 78;
-        ImVec2 mmin(cm.x + (cw - mw) * 0.5f, cm.y + 10);
+        // ---- "Background" tab strip (raised tab over a page panel) ----
+        float pad = 8;
+        ImVec2 page_mn(cm.x + pad, cm.y + 24);
+        ImVec2 page_mx(c.content_max.x - pad, c.content_max.y - 44);
+        // the active tab: a raised nub whose bottom edge merges into the page
+        ImVec2 tab_mn(page_mn.x, cm.y + 6), tab_mx(page_mn.x + 84, page_mn.y + 2);
+        dl->AddRectFilled(tab_mn, tab_mx, FACE);
+        Edge(dl, tab_mn, ImVec2(tab_mx.x, page_mn.y), HILIGHT, SHADOW); // no bottom edge
+        dl->AddText(ImVec2(tab_mn.x + 10, tab_mn.y + 3), TEXT, "Background");
+        WindowFrame(dl, page_mn, page_mx);
+        // paint over the seam so the tab looks connected to the page
+        dl->AddRectFilled(ImVec2(tab_mn.x + 2, page_mn.y - 1),
+                          ImVec2(tab_mx.x - 1, page_mn.y + 1), FACE);
+
+        // ---- monitor preview, centered near the page top ----
+        float mw = 118, mh = 84;
+        ImVec2 mmin(cm.x + (cw - mw) * 0.5f, page_mn.y + 16);
         BevelRaised(dl, mmin, ImVec2(mmin.x + mw, mmin.y + mh));
-        SunkenField(dl, ImVec2(mmin.x + 8, mmin.y + 6),
-                    ImVec2(mmin.x + mw - 8, mmin.y + mh - 12),
+        SunkenField(dl, ImVec2(mmin.x + 9, mmin.y + 8),
+                    ImVec2(mmin.x + mw - 9, mmin.y + mh - 16),
                     app.display_props_pending);
         // stand
-        dl->AddRectFilled(ImVec2(mmin.x + mw * 0.5f - 12, mmin.y + mh),
-                          ImVec2(mmin.x + mw * 0.5f + 12, mmin.y + mh + 5), FACE);
-        BevelRaised(dl, ImVec2(mmin.x + mw * 0.5f - 22, mmin.y + mh + 5),
-                    ImVec2(mmin.x + mw * 0.5f + 22, mmin.y + mh + 10));
+        dl->AddRectFilled(ImVec2(mmin.x + mw * 0.5f - 13, mmin.y + mh),
+                          ImVec2(mmin.x + mw * 0.5f + 13, mmin.y + mh + 6), FACE);
+        BevelRaised(dl, ImVec2(mmin.x + mw * 0.5f - 24, mmin.y + mh + 6),
+                    ImVec2(mmin.x + mw * 0.5f + 24, mmin.y + mh + 11));
 
-        dl->AddText(ImVec2(cm.x + 12, mmin.y + mh + 18), TEXT, "Background color:");
-
-        // 8x2 swatch grid
-        const float sw = 24, gap = 6;
+        // ---- label + 8x2 swatch grid ----
+        float ly = mmin.y + mh + 22;
+        dl->AddText(ImVec2(page_mn.x + 10, ly), TEXT, "Background color:");
+        const float sw = 24, gap = 7;
         float grid_w = 8 * sw + 7 * gap;
         float gx = cm.x + (cw - grid_w) * 0.5f;
-        float gy = mmin.y + mh + 34;
+        float gy = ly + 20;
         for (int i = 0; i < 16; ++i) {
             float x = gx + (i % 8) * (sw + gap);
             float y = gy + (i / 8) * (sw + gap);
@@ -77,21 +91,21 @@ void DrawDisplayProperties(AppState& app) {
             ImGui::PushID(i);
             bool clicked = ImGui::InvisibleButton("##swatch", ImVec2(sw, sw));
             ImGui::PopID();
-            dl->AddRectFilled(ImVec2(x, y), ImVec2(x + sw, y + sw), kDesktopColors[i]);
-            dl->AddRect(ImVec2(x, y), ImVec2(x + sw, y + sw), BLACK);
+            SunkenField(dl, ImVec2(x, y), ImVec2(x + sw, y + sw), kDesktopColors[i]);
             if (kDesktopColors[i] == app.display_props_pending)
-                dl->AddRect(ImVec2(x - 3, y - 3), ImVec2(x + sw + 3, y + sw + 3), SEL, 0, 0, 2.0f);
+                dl->AddRect(ImVec2(x - 3, y - 3), ImVec2(x + sw + 3, y + sw + 3),
+                            BLACK, 0, 0, 2.0f);
             if (clicked) app.display_props_pending = kDesktopColors[i];
         }
 
-        // OK / Cancel
-        float byy = c.content_max.y - 31;
-        ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 2 * 75 - 18, byy));
+        // ---- OK / Cancel, bottom-right, below the page ----
+        float byy = c.content_max.y - 34;
+        ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 2 * 75 - 16, byy));
         if (Button("OK")) {
             app.desktop_color = app.display_props_pending;
             app.display_props_open = false;
         }
-        ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 75 - 10, byy));
+        ImGui::SetCursorScreenPos(ImVec2(c.content_max.x - 75 - 8, byy));
         if (Button("Cancel")) app.display_props_open = false;
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) app.display_props_open = false;
     }
