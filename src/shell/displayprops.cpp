@@ -17,6 +17,28 @@ static const ImU32 kDesktopColors[16] = {
     IM_COL32(0, 255, 255, 255),   IM_COL32(255, 255, 255, 255),
 };
 
+// One Win95 property-sheet tab with 1px chamfered top corners. The active tab
+// is raised (its top sits `pop` px higher) and its fill covers the page's top
+// border so the two read as joined; inactive tabs sit lower with the page
+// border showing as their bottom edge.
+static void DrawTab(ImDrawList* dl, float x, float w, float top_y, float page_top,
+                    const char* label, bool active) {
+    float t = active ? top_y : top_y + 2;               // inactive tops are lower
+    float b = active ? page_top + 2 : page_top;         // active covers the border
+    // fill, inset 1px at the top for the chamfered corners
+    dl->AddRectFilled(ImVec2(x + 1, t), ImVec2(x + w - 1, b), FACE);
+    dl->AddRectFilled(ImVec2(x, t + 1), ImVec2(x + w, b), FACE);
+    // top highlight (between the cut corners) + left highlight edge
+    dl->AddRectFilled(ImVec2(x + 2, t), ImVec2(x + w - 2, t + 1), HILIGHT);
+    dl->AddRectFilled(ImVec2(x + 1, t + 1), ImVec2(x + 2, t + 2), HILIGHT); // TL chamfer
+    dl->AddRectFilled(ImVec2(x, t + 2), ImVec2(x + 1, b), HILIGHT);
+    // right side: shadow then black, with the TR chamfer stepped in 1px
+    dl->AddRectFilled(ImVec2(x + w - 2, t + 1), ImVec2(x + w - 1, t + 2), SHADOW); // TR chamfer
+    dl->AddRectFilled(ImVec2(x + w - 2, t + 2), ImVec2(x + w - 1, b), SHADOW);
+    dl->AddRectFilled(ImVec2(x + w - 1, t + 2), ImVec2(x + w, b), DKSHADOW);
+    dl->AddText(ImVec2(x + 9, t + 4), TEXT, label);
+}
+
 void OpenDisplayProperties(AppState& app) {
     app.display_props_open = true;
     app.display_props_opened_now = true;
@@ -28,7 +50,7 @@ void DrawDisplayProperties(AppState& app) {
     if (!app.display_props_open) return;
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    ImVec2 dsz(310, 340);
+    ImVec2 dsz(380, 344);
     ImVec2 dpos(vp->Pos.x + (vp->Size.x - dsz.x) * 0.5f,
                 vp->Pos.y + (vp->Size.y - dsz.y) * 0.5f - 30);
     Chrome c;
@@ -52,22 +74,26 @@ void DrawDisplayProperties(AppState& app) {
         ImVec2 cm = c.content_min;
         float cw = c.content_max.x - cm.x;
 
-        // ---- "Background" tab over a page panel ----
+        // ---- tab strip over a page panel (Background active; the rest are
+        //      authentic decorative tabs, like the real Display Properties) ----
         float pad = 8;
-        ImVec2 page_mn(cm.x + pad, cm.y + 26);
+        ImVec2 page_mn(cm.x + pad, cm.y + 28);
         ImVec2 page_mx(c.content_max.x - pad, c.content_max.y - 44);
         WindowFrame(dl, page_mn, page_mx);
 
-        // active tab: raised, top + left highlight, right shadow/black, NO bottom
-        // edge — it fills over the page's top border so the two read as joined.
-        ImVec2 tab_mn(page_mn.x + 6, cm.y + 6);
-        ImVec2 tab_mx(tab_mn.x + 90, page_mn.y + 2);   // extends 2px into the page
-        dl->AddRectFilled(tab_mn, tab_mx, FACE);       // covers page top border here
-        dl->AddRectFilled(tab_mn, ImVec2(tab_mx.x - 2, tab_mn.y + 1), HILIGHT);   // top
-        dl->AddRectFilled(tab_mn, ImVec2(tab_mn.x + 1, tab_mx.y), HILIGHT);       // left
-        dl->AddRectFilled(ImVec2(tab_mx.x - 2, tab_mn.y), ImVec2(tab_mx.x - 1, tab_mx.y), SHADOW);
-        dl->AddRectFilled(ImVec2(tab_mx.x - 1, tab_mn.y), ImVec2(tab_mx.x, tab_mx.y), DKSHADOW);
-        dl->AddText(ImVec2(tab_mn.x + 11, tab_mn.y + 4), TEXT, "Background");
+        static const char* tabs[] = { "Background", "Screen Saver", "Appearance", "Settings" };
+        float tab_top = cm.y + 6;
+        // draw inactive tabs first, active one last so it overlaps at the seam
+        for (int pass = 0; pass < 2; ++pass) {
+            float x = page_mn.x;
+            for (int ti = 0; ti < 4; ++ti) {
+                float tw = ImGui::CalcTextSize(tabs[ti]).x + 18;
+                bool active = (ti == 0);
+                if (active == (pass == 1))
+                    DrawTab(dl, x, tw, tab_top, page_mn.y, tabs[ti], active);
+                x += tw - 1;   // 1px overlap between adjacent tabs
+            }
+        }
 
         // ---- monitor preview, centered near the page top ----
         float mw = 118, mh = 84;
