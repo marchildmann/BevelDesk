@@ -35,8 +35,13 @@ ImGui styling, no image assets, no web views.
   Ctrl+C that actually interrupts. The window closes when the shell exits —
   just like 1995, except this one runs zsh. *(macOS/Linux)*
 - **Taskbar & Start menu** — live clock, per-window task buttons with
-  pressed/active states, and Start ▸ Shut Down… with the iconic dithered
-  screen-fade dialog (Restart gives you a fresh desktop).
+  pressed/active states, and a working Start menu: Programs (MS-DOS Prompt),
+  Documents / Find (Explorer), Settings (Display Properties), Help (About),
+  Run… (a real Run box — type a folder to open it, or a command to run in a
+  DOS prompt), Shut Down… (the iconic dithered screen-fade dialog).
+- **UI zoom** — Ctrl/Cmd `+` / `-` / `0` scales the whole desktop through
+  1×–3×, with fonts re-rasterized at each level so text stays crisp (no
+  bitmap blur). Handy on 4K/5K displays.
 - **Display Properties** (Start ▸ Settings) — recolor the desktop from the
   classic 16-color picker, with a live monitor preview, OK/Cancel semantics
   included.
@@ -94,6 +99,7 @@ build\Release\beveldesk.exe
 | `./build/beveldesk` | normal 1024×768 window (`--windowed WxH` picks another size) |
 | `./build/beveldesk --fullscreen` | total immersion — no host chrome; exit via Start ▸ Shut Down… or Cmd/Ctrl+Q |
 | `./build/beveldesk --borderless` | square-cornered undecorated window; drag it by the taskbar's empty area, Cmd+M minimizes |
+| `./build/beveldesk --zoom 1.5` | start at a UI zoom level (also Ctrl/Cmd +/-/0 at runtime) |
 | `./build/beveldesk --screenshot [out.png]` | headless QA: renders 10 frames, writes a PNG, exits |
 | `…--screenshot s.png --demo start\|max\|nav\|icons\|shutdown\|dos\|sysmenu` | screenshot specific UI states (`dos` runs a live shell for ~1.4 s first) |
 

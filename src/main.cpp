@@ -14,9 +14,11 @@
 #include "app/app.h"
 #include "platform/gl.h"
 #include "platform/platform.h"
+#include "shell/about.h"
 #include "shell/desktop.h"
 #include "shell/displayprops.h"
 #include "shell/dosprompt.h"
+#include "shell/run.h"
 #include "shell/explorer.h"
 #include "shell/shutdown.h"
 #include "shell/taskbar.h"
@@ -52,6 +54,10 @@ int main(int argc, char** argv) {
             borderless = true;   // square corners: no macOS title bar / rounding
         } else if (std::strcmp(argv[i], "--fullscreen") == 0) {
             fullscreen = true;   // total immersion: no host chrome at all
+        } else if (std::strcmp(argv[i], "--zoom") == 0 && i + 1 < argc) {
+            g_app.zoom = (float)std::atof(argv[++i]);    // startup zoom (QA/pref)
+            if (g_app.zoom < 1.0f) g_app.zoom = 1.0f;
+            if (g_app.zoom > 3.0f) g_app.zoom = 3.0f;
         }
     }
 
@@ -97,9 +103,16 @@ int main(int argc, char** argv) {
     io.IniFilename = nullptr;                       // deterministic layout
     io.ConfigWindowsMoveFromTitleBarOnly = true;    // we drag via our own caption
     t95::ApplyStyle();
-    float cscale_x = 1.0f, cscale_y = 1.0f;
-    glfwGetWindowContentScale(window, &cscale_x, &cscale_y);
-    LoadFonts(io, screenshot_mode ? 1.0f : (cscale_x > cscale_y ? cscale_x : cscale_y));
+    // base rasterization density = framebuffer/window ratio (2 on Retina).
+    // Fonts are rasterized at base_density * zoom so text stays crisp zoomed.
+    auto pixel_ratio = [&]() {
+        int ww = 1, wh = 1, fw = 1, fh = 1;
+        glfwGetWindowSize(window, &ww, &wh);
+        glfwGetFramebufferSize(window, &fw, &fh);
+        return (ww > 0) ? (float)fw / ww : 1.0f;
+    };
+    float base_density = screenshot_mode ? 1.0f : pixel_ratio();
+    LoadFonts(io, base_density * g_app.zoom);
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 150");
@@ -120,13 +133,40 @@ int main(int argc, char** argv) {
             g_app.shutdown_opened_this_frame = true;
         }
         if (demo && std::strcmp(demo, "display") == 0) OpenDisplayProperties(g_app);
+        if (demo && std::strcmp(demo, "about") == 0) OpenAbout(g_app);
+        if (demo && std::strcmp(demo, "run") == 0) OpenRun(g_app);
     }
 
     int frame = 0;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        // rebuild the font atlas at the new density when the zoom changed, so
+        // glyphs are re-rasterized crisp rather than bitmap-upscaled
+        if (g_app.zoom_dirty) {
+            io.Fonts->Clear();
+            t95::FontBold = nullptr; t95::FontMono = nullptr;
+            LoadFonts(io, base_density * g_app.zoom);
+            ImGui_ImplOpenGL3_DestroyFontsTexture();
+            ImGui_ImplOpenGL3_CreateFontsTexture();
+            g_app.zoom_dirty = false;
+        }
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
+
+        // apply zoom: shrink the logical display so fixed-pixel UI is magnified,
+        // and map the cursor back into logical space (must run before NewFrame)
+        if (g_app.zoom != 1.0f) {
+            float Z = g_app.zoom, R = screenshot_mode ? 1.0f : pixel_ratio();
+            int ww, wh;
+            glfwGetWindowSize(window, &ww, &wh);
+            if (screenshot_mode) { ww = win_w; wh = win_h; }
+            io.DisplaySize = ImVec2(ww / Z, wh / Z);
+            io.DisplayFramebufferScale = ImVec2(R * Z, R * Z);
+            if (io.MousePos.x > -1e30f) { io.MousePos.x /= Z; io.MousePos.y /= Z; }
+        }
+
         ImGui::NewFrame();
 
         // --demo sysmenu: pop the system menu on the focused explorer
@@ -154,6 +194,8 @@ int main(int argc, char** argv) {
         DrawDosPrompts(g_app);
         DrawTaskbarAndStartMenu(g_app);
         DrawDisplayProperties(g_app);
+        DrawAbout(g_app);
+        DrawRun(g_app);
         DrawShutdownDialog(g_app);   // last: its fade covers everything
 
         // Cmd+Q (macOS) / Ctrl+Q exits — fullscreen has no host chrome.
@@ -167,6 +209,24 @@ int main(int argc, char** argv) {
         // Cmd+M minimizes the host window to the Dock (borderless has no button)
         if (io.KeySuper && ImGui::IsKeyPressed(ImGuiKey_M, false))
             glfwIconifyWindow(window);
+
+        // Ctrl/Cmd +/-/0 : UI zoom, stepping through fixed levels
+        if ((io.KeySuper || io.KeyCtrl) && !dos_focused) {
+            static const float steps[] = { 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f };
+            const int n = (int)(sizeof(steps) / sizeof(steps[0]));
+            int cur = 0;
+            for (int k = 0; k < n; ++k) if (steps[k] <= g_app.zoom + 0.01f) cur = k;
+            if (ImGui::IsKeyPressed(ImGuiKey_Equal, false) ||
+                ImGui::IsKeyPressed(ImGuiKey_KeypadAdd, false)) {
+                if (cur < n - 1) { g_app.zoom = steps[cur + 1]; g_app.zoom_dirty = true; }
+            } else if (ImGui::IsKeyPressed(ImGuiKey_Minus, false) ||
+                       ImGui::IsKeyPressed(ImGuiKey_KeypadSubtract, false)) {
+                if (cur > 0) { g_app.zoom = steps[cur - 1]; g_app.zoom_dirty = true; }
+            } else if (ImGui::IsKeyPressed(ImGuiKey_0, false) ||
+                       ImGui::IsKeyPressed(ImGuiKey_Keypad0, false)) {
+                if (g_app.zoom != 1.0f) { g_app.zoom = 1.0f; g_app.zoom_dirty = true; }
+            }
+        }
         if (g_app.quit_requested) glfwSetWindowShouldClose(window, GLFW_TRUE);
 
         ImGui::Render();

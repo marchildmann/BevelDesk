@@ -42,6 +42,13 @@ Ambiguities resolved autonomously during the mission.
     deterministic for screenshots.
 12. **Window title of `/` is "My Computer"**-less: titles show the folder
     name (or the full path at the root). Simpler and predictable.
+13d. **Zoom on 1.91 via projection + atlas rebuild** (prompted by @ocornut's
+    feedback). We're pinned to 1.91.9b (DECISIONS #9). Rather than the risky
+    1.92 font-system upgrade (untested on Linux/Windows here), zoom is done
+    by shrinking io.DisplaySize by Z (fixed-pixel UI magnifies), setting
+    DisplayFramebufferScale = pixel_ratio*Z, dividing MousePos by Z, and
+    rebuilding the font atlas at base_density*Z so glyphs stay crisp. Upgrade
+    to 1.92 (dynamic fonts) remains the cleaner long-term path.
 13c. **Windowed by default** (revised twice per user feedback). macOS rounds
     the corners of titled windows, which breaks the Win95 illusion — but a
     surprise fullscreen takeover on launch is worse. Default is a normal

@@ -50,9 +50,14 @@
 - Font falls back to ProggyClean (monospaced, 1px-overdraw bold) only if no
   system UI font is found; glyphs are grayscale-antialiased, not the exact
   MS Sans Serif bitmaps.
-- Menu bar (File/Edit/View/Help) and Start menu items other than Shut Down,
-  MS-DOS Prompt and Settings (Display Properties) are decorative; no context
-  menus. The chosen desktop color is session-only (no config file yet).
+- Every Start menu item now does something (Programs→DOS, Documents/Find→
+  Explorer, Settings→Display Properties, Help→About, Run…→Run box, Shut Down).
+  The menu bar (File/Edit/View/Help) is still decorative; no context menus.
+  The chosen desktop color / zoom level are session-only (no config file yet).
+- UI zoom (Ctrl/Cmd +/-/0, 1x–3x): the logical display is shrunk so the
+  fixed-pixel UI magnifies, the cursor is mapped back to logical space, and
+  the font atlas is rebuilt at base_density*zoom for crisp glyphs. On 1.92+
+  this would be even simpler (dynamic fonts) — a future upgrade.
 - MS-DOS Prompt: POSIX only (Windows needs ConPTY); no scroll regions or
   full alt-screen, so full-screen TUIs (vim, htop) render imperfectly —
   line-oriented shell work is solid. No clipboard paste yet; fixed 80x25.

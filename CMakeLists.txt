@@ -57,6 +57,8 @@ add_executable(beveldesk
   src/shell/shutdown.cpp
   src/shell/dosprompt.cpp
   src/shell/displayprops.cpp
+  src/shell/about.cpp
+  src/shell/run.cpp
   src/platform/platform.cpp
   src/platform/pty.cpp
   src/platform/stb_impl.cpp

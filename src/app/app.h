@@ -67,12 +67,25 @@ struct AppState {
     bool quit_requested = false;
     int desktop_selected = -1;            // 0 = My Computer, 1 = Recycle Bin
 
+    // UI zoom (Ctrl/Cmd +/-/0). Fonts re-rasterize on change for crisp text.
+    float zoom = 1.0f;
+    bool zoom_dirty = false;
+
     // desktop appearance
     ImU32 desktop_color = IM_COL32(0, 128, 128, 255);   // the teal, changeable
     bool display_props_open = false;
     bool display_props_opened_now = false;
     ImU32 display_props_pending = IM_COL32(0, 128, 128, 255);
     ImU32 display_props_original = IM_COL32(0, 128, 128, 255); // for Cancel revert
+
+    // About dialog
+    bool about_open = false;
+    bool about_opened_now = false;
+
+    // Run dialog
+    bool run_open = false;
+    bool run_opened_now = false;
+    char run_buf[512] = {0};
 
     // Shut Down dialog
     bool shutdown_open = false;

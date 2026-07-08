@@ -1,6 +1,9 @@
 #include "shell/taskbar.h"
 #include "shell/displayprops.h"
 #include "shell/dosprompt.h"
+#include "shell/about.h"
+#include "shell/run.h"
+#include <cstdlib>
 #include "app/app.h"
 #include "theme95/theme95.h"
 #include "theme95/icons95.h"
@@ -35,10 +38,10 @@ static void DrawStartMenu(AppState& app, float taskbar_top) {
 
     struct Item { const char* label; bool arrow; bool separator_before; };
     static const Item items[] = {
-        { "Programs", true, false },
-        { "Documents", true, false },
+        { "Programs", false, false },
+        { "Documents", false, false },
         { "Settings", false, false },
-        { "Find", true, false },
+        { "Find", false, false },
         { "Help", false, false },
         { "MS-DOS Prompt", false, false },
         { "Run...", false, false },
@@ -96,13 +99,22 @@ static void DrawStartMenu(AppState& app, float taskbar_top) {
         }
         if (clicked) {
             std::string label = it.label;
+            const char* home = std::getenv("HOME");
             if (label == "Shut Down...") {
                 app.shutdown_open = true;
                 app.shutdown_opened_this_frame = true;
-            } else if (label == "MS-DOS Prompt") {
+            } else if (label == "MS-DOS Prompt" || label == "Programs") {
                 OpenDosPrompt(app);
             } else if (label == "Settings") {
                 OpenDisplayProperties(app);
+            } else if (label == "Documents") {
+                app.OpenExplorer(home ? home : "/");
+            } else if (label == "Find") {
+                app.OpenExplorer("/");
+            } else if (label == "Help") {
+                OpenAbout(app);
+            } else if (label == "Run...") {
+                OpenRun(app);
             }
             app.start_open = false;
         }
