@@ -6,9 +6,10 @@ out/
 *.o
 *.obj
 
-# IDE / tooling
+# IDE / agent tooling (local config, like .vscode/ — see CONTRIBUTING.md)
 .vscode/
 .idea/
+.claude/
 .cache/
 compile_commands.json
 

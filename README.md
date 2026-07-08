@@ -149,14 +149,13 @@ Start menu — runs in the browser.
 
 ## Project docs
 
-The repo ships its own institutional memory — the build was run as an
-autonomous agent mission with a strict research → build → self-critique loop:
-
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — **the contributor's field guide**:
+  architecture seams, Win95 authenticity rules, the build/verify loop, and the
+  Dear ImGui gotchas that each cost a debugging round (read this first)
 - [`PLAN.md`](PLAN.md) — the Win95 visual-language research (palette, bevels, metrics, Explorer anatomy)
 - [`DECISIONS.md`](DECISIONS.md) — every ambiguity resolved, numbered, with reasoning
 - [`CRITIQUE.md`](CRITIQUE.md) — the compile → screenshot → inspect → fix iterations, including the bugs only play-testing found
 - [`STATUS.md`](STATUS.md) — what works, known limitations, roadmap
-- [`.claude/skills/imgui-os/SKILL.md`](.claude/skills/imgui-os/SKILL.md) — the contributor's field guide: architecture seams, authenticity rules, and the ImGui gotchas that each cost a debugging round
 
 ## Authenticity notes
 
