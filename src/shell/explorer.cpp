@@ -104,6 +104,180 @@ static void MenuBar(ImDrawList* dl, ImVec2 mn, float width) {
     (void)width;
 }
 
+// Details listview (Name/Size/Type, sortable headers, custom scrollbar).
+// Draws inside the already-painted sunken field [lmin,lmax]. Returns the entry
+// index to navigate into (double-clicked folder), or -1.
+static int DrawDetailsView(ExplorerWin& w, ImDrawList* dl,
+                           ImVec2 lmin, ImVec2 lmax, float inner_w) {
+    int navigate_to = -1;
+    const float row_h = 17;
+    float hx = lmin.x + 2, hy = lmin.y + 2, hh = 16;
+    float view_h = lmax.y - 2 - (hy + hh);
+    float content_h = row_h * (float)w.entries.size();
+    bool need_sb = content_h > view_h;
+    float sb_w = need_sb ? 16.0f : 0.0f;
+    float avail_w = inner_w - sb_w;
+
+    float col_size = 84, col_type = 96;
+    float col_name = avail_w - col_size - col_type;
+    if (col_name < 120) { col_name = 120; }
+
+    // header row: raised gray cells, clickable to sort
+    struct { const char* label; float wdt; } cols[] = {
+        { "Name", col_name }, { "Size", col_size }, { "Type", col_type } };
+    float cx = hx;
+    for (int ci = 0; ci < 3; ++ci) {
+        bool right_align = (ci == 1);          // Size: LVCFMT_RIGHT
+        float cw2 = (ci == 2) ? (lmax.x - 2 - cx) : cols[ci].wdt;
+        if (cw2 < 20) cw2 = 20;
+        ImGui::SetCursorScreenPos(ImVec2(cx, hy));
+        ImGui::PushID(ci);
+        bool clicked = ImGui::InvisibleButton("##hdr", ImVec2(cw2, hh));
+        ImGui::PopID();
+        bool held = ImGui::IsItemActive() && ImGui::IsItemHovered();
+        if (held) BevelPressed(dl, ImVec2(cx, hy), ImVec2(cx + cw2, hy + hh));
+        else      BevelRaised(dl, ImVec2(cx, hy), ImVec2(cx + cw2, hy + hh));
+        float off = held ? 1.0f : 0.0f;
+        ImVec2 lts = ImGui::CalcTextSize(cols[ci].label);
+        float lx = right_align ? (cx + cw2 - 8 - lts.x) : (cx + 5);
+        ImVec4 clip(cx + 4, hy, cx + cw2 - 4, hy + hh);
+        dl->AddText(nullptr, 0.0f, ImVec2(lx + off, hy + 1 + off), TEXT,
+                    cols[ci].label, nullptr, 0.0f, &clip);
+        if (clicked) {
+            if (w.sort_col == ci) w.sort_asc = !w.sort_asc;
+            else { w.sort_col = ci; w.sort_asc = true; }
+            SortEntries(w);
+        }
+        cx += cw2;
+    }
+
+    // rows (scrolling child + custom Win95 scrollbar)
+    ImGui::SetCursorScreenPos(ImVec2(hx, hy + hh));
+    std::string child_id = "list:" + w.path.string();
+    ImGui::BeginChild(child_id.c_str(), ImVec2(inner_w - sb_w, view_h),
+                      ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
+    // SetScrollY only applies at next frame's Begin — while pushing,
+    // GetScrollY still returns the old value and must not overwrite
+    // w.scroll_y (that ate every other drag delta: thumb at half speed)
+    bool scroll_pushed = w.scroll_set;
+    if (w.scroll_set) { ImGui::SetScrollY(w.scroll_y); w.scroll_set = false; }
+    ImDrawList* cdl = ImGui::GetWindowDrawList();
+    // rows must stack at exactly row_h (Win95 density) — the global
+    // ItemSpacing.y would add 4px/row and desync all scrollbar math
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+    for (int i = 0; i < (int)w.entries.size(); ++i) {
+        const FileEntry& fe = w.entries[i];
+        ImVec2 rp = ImGui::GetCursorScreenPos();
+        ImGui::PushID(i);
+        ImGui::InvisibleButton("##row", ImVec2(inner_w - sb_w - 2, row_h));
+        ImGui::PopID();
+        bool hovered = ImGui::IsItemHovered();
+        if (hovered && ImGui::IsMouseClicked(0)) w.selected = i;
+        if (hovered && ImGui::IsMouseDoubleClicked(0) && fe.is_dir) navigate_to = i;
+
+        // icon + name (only the name cell highlights, Win95-style)
+        if (fe.is_dir) icons95::Folder14(cdl, ImVec2(rp.x + 2, rp.y + 1));
+        else           icons95::Document14(cdl, ImVec2(rp.x + 2, rp.y + 1));
+        ImVec2 ts = ImGui::CalcTextSize(fe.name.c_str());
+        bool sel = (w.selected == i);
+        float name_max = rp.x + col_name - 4;
+        if (sel) {
+            float bg_r = rp.x + 20 + ts.x + 2;
+            if (bg_r > name_max) bg_r = name_max;
+            cdl->AddRectFilled(ImVec2(rp.x + 18, rp.y), ImVec2(bg_r, rp.y + row_h - 1), SEL);
+        }
+        ImVec4 nclip(rp.x + 20, rp.y, name_max, rp.y + row_h);
+        cdl->AddText(nullptr, 0.0f, ImVec2(rp.x + 20, rp.y + 2),
+                     sel ? SEL_TEXT : TEXT, fe.name.c_str(), nullptr, 0.0f, &nclip);
+
+        // size (right-aligned) + type
+        if (!fe.is_dir) {
+            std::string sz = FormatKB(fe.size);
+            ImVec2 sts = ImGui::CalcTextSize(sz.c_str());
+            cdl->AddText(ImVec2(rp.x + col_name + col_size - 8 - sts.x, rp.y + 2), TEXT, sz.c_str());
+        }
+        ImVec4 tclip(rp.x + col_name + col_size, rp.y, rp.x + inner_w - sb_w - 4, rp.y + row_h);
+        cdl->AddText(nullptr, 0.0f, ImVec2(rp.x + col_name + col_size + 4, rp.y + 2),
+                     TEXT, fe.type.c_str(), nullptr, 0.0f, &tclip);
+    }
+    ImGui::PopStyleVar();
+    if (!scroll_pushed) w.scroll_y = ImGui::GetScrollY();
+    ImGui::EndChild();
+    if (need_sb) {
+        float ns = ScrollBarV("##vsb", ImVec2(lmax.x - 2 - 16, hy + hh),
+                              ImVec2(lmax.x - 2, lmax.y - 2),
+                              view_h, content_h, w.scroll_y);
+        if (ns != w.scroll_y) { w.scroll_y = ns; w.scroll_set = true; }
+    }
+    return navigate_to;
+}
+
+// Large Icons view — a flowing 32px-icon grid. Same field/return contract.
+static int DrawIconsView(ExplorerWin& w, ImDrawList* dl,
+                         ImVec2 lmin, ImVec2 lmax, float inner_w) {
+    int navigate_to = -1;
+    const float cell_w = 76, cell_h = 66;
+    float gy = lmin.y + 2;
+    float view_h = lmax.y - 2 - gy;
+    int n = (int)w.entries.size();
+    int per_row = (int)((inner_w - 16) / cell_w);   // worst case with scrollbar
+    if (per_row < 1) per_row = 1;
+    int rows = (n + per_row - 1) / per_row;
+    float content_h = rows * cell_h + 4;
+    bool need_sb = content_h > view_h;
+    float sb_w = need_sb ? 16.0f : 0.0f;
+    per_row = (int)((inner_w - sb_w) / cell_w);
+    if (per_row < 1) per_row = 1;
+    rows = (n + per_row - 1) / per_row;
+    content_h = rows * cell_h + 4;
+
+    ImGui::SetCursorScreenPos(ImVec2(lmin.x + 2, gy));
+    std::string child_id = "icons:" + w.path.string();
+    ImGui::BeginChild(child_id.c_str(), ImVec2(inner_w - sb_w, view_h),
+                      ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
+    bool scroll_pushed = w.scroll_set;   // see details view: avoid stale readback
+    if (w.scroll_set) { ImGui::SetScrollY(w.scroll_y); w.scroll_set = false; }
+    ImDrawList* cdl = ImGui::GetWindowDrawList();
+    ImVec2 origin = ImGui::GetCursorScreenPos();    // scroll-adjusted
+    ImGui::Dummy(ImVec2(1, content_h));             // scroll extent
+    for (int i = 0; i < n; ++i) {
+        const FileEntry& fe = w.entries[i];
+        int r = i / per_row, cidx = i % per_row;
+        ImVec2 cp(origin.x + cidx * cell_w, origin.y + r * cell_h);
+        ImGui::SetCursorScreenPos(cp);
+        ImGui::PushID(i);
+        ImGui::InvisibleButton("##cell", ImVec2(cell_w, cell_h));
+        ImGui::PopID();
+        bool hovered = ImGui::IsItemHovered();
+        if (hovered && ImGui::IsMouseClicked(0)) w.selected = i;
+        if (hovered && ImGui::IsMouseDoubleClicked(0) && fe.is_dir) navigate_to = i;
+
+        ImVec2 ip(cp.x + (cell_w - 32) * 0.5f, cp.y + 3);
+        if (fe.is_dir) icons95::Folder32(cdl, ip);
+        else           icons95::Document32(cdl, ip);
+
+        bool sel = (w.selected == i);
+        ImVec2 ts = ImGui::CalcTextSize(fe.name.c_str());
+        float tw = ts.x < cell_w - 6 ? ts.x : cell_w - 6;
+        ImVec2 tp(cp.x + (cell_w - tw) * 0.5f, cp.y + 39);
+        if (sel)
+            cdl->AddRectFilled(ImVec2(tp.x - 2, tp.y - 1),
+                               ImVec2(tp.x + tw + 2, tp.y + ts.y + 1), SEL);
+        ImVec4 tclip(tp.x, tp.y, tp.x + tw, tp.y + ts.y);
+        cdl->AddText(nullptr, 0.0f, tp, sel ? SEL_TEXT : TEXT,
+                     fe.name.c_str(), nullptr, 0.0f, &tclip);
+    }
+    if (!scroll_pushed) w.scroll_y = ImGui::GetScrollY();
+    ImGui::EndChild();
+    if (need_sb) {
+        float ns = ScrollBarV("##vsb", ImVec2(lmax.x - 2 - 16, gy),
+                              ImVec2(lmax.x - 2, lmax.y - 2),
+                              view_h, content_h, w.scroll_y);
+        if (ns != w.scroll_y) { w.scroll_y = ns; w.scroll_set = true; }
+    }
+    return navigate_to;
+}
+
 static void DrawExplorer(AppState& app, ExplorerWin& w) {
     if (w.dirty) Refresh(w);
 
@@ -175,172 +349,9 @@ static void DrawExplorer(AppState& app, ExplorerWin& w) {
     if (lmax.y > lmin.y + 30 && lmax.x > lmin.x + 60) {
         SunkenField(dl, lmin, lmax, WINBG);
         float inner_w = (lmax.x - lmin.x) - 4;
-        int navigate_to = -1;
-
-        if (w.view_mode == 0) {
-            // ================= Details view =================
-            const float row_h = 17;
-            float hx = lmin.x + 2, hy = lmin.y + 2, hh = 16;
-            float view_h = lmax.y - 2 - (hy + hh);
-            float content_h = row_h * (float)w.entries.size();
-            bool need_sb = content_h > view_h;
-            float sb_w = need_sb ? 16.0f : 0.0f;
-            float avail_w = inner_w - sb_w;
-
-            float col_size = 84, col_type = 96;
-            float col_name = avail_w - col_size - col_type;
-            if (col_name < 120) { col_name = 120; }
-
-            // header row: raised gray cells, clickable to sort
-            struct { const char* label; float wdt; } cols[] = {
-                { "Name", col_name }, { "Size", col_size }, { "Type", col_type } };
-            float cx = hx;
-            for (int ci = 0; ci < 3; ++ci) {
-                bool right_align = (ci == 1);          // Size: LVCFMT_RIGHT
-                float cw2 = (ci == 2) ? (lmax.x - 2 - cx) : cols[ci].wdt;
-                if (cw2 < 20) cw2 = 20;
-                ImGui::SetCursorScreenPos(ImVec2(cx, hy));
-                ImGui::PushID(ci);
-                bool clicked = ImGui::InvisibleButton("##hdr", ImVec2(cw2, hh));
-                ImGui::PopID();
-                bool held = ImGui::IsItemActive() && ImGui::IsItemHovered();
-                if (held) BevelPressed(dl, ImVec2(cx, hy), ImVec2(cx + cw2, hy + hh));
-                else      BevelRaised(dl, ImVec2(cx, hy), ImVec2(cx + cw2, hy + hh));
-                float off = held ? 1.0f : 0.0f;
-                ImVec2 lts = ImGui::CalcTextSize(cols[ci].label);
-                float lx = right_align ? (cx + cw2 - 8 - lts.x) : (cx + 5);
-                ImVec4 clip(cx + 4, hy, cx + cw2 - 4, hy + hh);
-                dl->AddText(nullptr, 0.0f, ImVec2(lx + off, hy + 1 + off), TEXT,
-                            cols[ci].label, nullptr, 0.0f, &clip);
-                if (clicked) {
-                    if (w.sort_col == ci) w.sort_asc = !w.sort_asc;
-                    else { w.sort_col = ci; w.sort_asc = true; }
-                    SortEntries(w);
-                }
-                cx += cw2;
-            }
-
-            // rows (scrolling child + custom Win95 scrollbar)
-            ImGui::SetCursorScreenPos(ImVec2(hx, hy + hh));
-            std::string child_id = "list:" + w.path.string();
-            ImGui::BeginChild(child_id.c_str(), ImVec2(inner_w - sb_w, view_h),
-                              ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
-            // SetScrollY only applies at next frame's Begin — while pushing,
-            // GetScrollY still returns the old value and must not overwrite
-            // w.scroll_y (that ate every other drag delta: thumb at half speed)
-            bool scroll_pushed = w.scroll_set;
-            if (w.scroll_set) { ImGui::SetScrollY(w.scroll_y); w.scroll_set = false; }
-            ImDrawList* cdl = ImGui::GetWindowDrawList();
-            // rows must stack at exactly row_h (Win95 density) — the global
-            // ItemSpacing.y would add 4px/row and desync all scrollbar math
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-            for (int i = 0; i < (int)w.entries.size(); ++i) {
-                const FileEntry& fe = w.entries[i];
-                ImVec2 rp = ImGui::GetCursorScreenPos();
-                ImGui::PushID(i);
-                ImGui::InvisibleButton("##row", ImVec2(inner_w - sb_w - 2, row_h));
-                ImGui::PopID();
-                bool hovered = ImGui::IsItemHovered();
-                if (hovered && ImGui::IsMouseClicked(0)) w.selected = i;
-                if (hovered && ImGui::IsMouseDoubleClicked(0) && fe.is_dir) navigate_to = i;
-
-                // icon + name (only the name cell highlights, Win95-style)
-                if (fe.is_dir) icons95::Folder14(cdl, ImVec2(rp.x + 2, rp.y + 1));
-                else           icons95::Document14(cdl, ImVec2(rp.x + 2, rp.y + 1));
-                ImVec2 ts = ImGui::CalcTextSize(fe.name.c_str());
-                bool sel = (w.selected == i);
-                float name_max = rp.x + col_name - 4;
-                if (sel) {
-                    float bg_r = rp.x + 20 + ts.x + 2;
-                    if (bg_r > name_max) bg_r = name_max;
-                    cdl->AddRectFilled(ImVec2(rp.x + 18, rp.y), ImVec2(bg_r, rp.y + row_h - 1), SEL);
-                }
-                ImVec4 nclip(rp.x + 20, rp.y, name_max, rp.y + row_h);
-                cdl->AddText(nullptr, 0.0f, ImVec2(rp.x + 20, rp.y + 2),
-                             sel ? SEL_TEXT : TEXT, fe.name.c_str(), nullptr, 0.0f, &nclip);
-
-                // size (right-aligned) + type
-                if (!fe.is_dir) {
-                    std::string sz = FormatKB(fe.size);
-                    ImVec2 sts = ImGui::CalcTextSize(sz.c_str());
-                    cdl->AddText(ImVec2(rp.x + col_name + col_size - 8 - sts.x, rp.y + 2), TEXT, sz.c_str());
-                }
-                ImVec4 tclip(rp.x + col_name + col_size, rp.y, rp.x + inner_w - sb_w - 4, rp.y + row_h);
-                cdl->AddText(nullptr, 0.0f, ImVec2(rp.x + col_name + col_size + 4, rp.y + 2),
-                             TEXT, fe.type.c_str(), nullptr, 0.0f, &tclip);
-            }
-            ImGui::PopStyleVar();
-            if (!scroll_pushed) w.scroll_y = ImGui::GetScrollY();
-            ImGui::EndChild();
-            if (need_sb) {
-                float ns = ScrollBarV("##vsb", ImVec2(lmax.x - 2 - 16, hy + hh),
-                                      ImVec2(lmax.x - 2, lmax.y - 2),
-                                      view_h, content_h, w.scroll_y);
-                if (ns != w.scroll_y) { w.scroll_y = ns; w.scroll_set = true; }
-            }
-        } else {
-            // ================= Large Icons view =================
-            const float cell_w = 76, cell_h = 66;
-            float gy = lmin.y + 2;
-            float view_h = lmax.y - 2 - gy;
-            int n = (int)w.entries.size();
-            int per_row = (int)((inner_w - 16) / cell_w);   // worst case with scrollbar
-            if (per_row < 1) per_row = 1;
-            int rows = (n + per_row - 1) / per_row;
-            float content_h = rows * cell_h + 4;
-            bool need_sb = content_h > view_h;
-            float sb_w = need_sb ? 16.0f : 0.0f;
-            per_row = (int)((inner_w - sb_w) / cell_w);
-            if (per_row < 1) per_row = 1;
-            rows = (n + per_row - 1) / per_row;
-            content_h = rows * cell_h + 4;
-
-            ImGui::SetCursorScreenPos(ImVec2(lmin.x + 2, gy));
-            std::string child_id = "icons:" + w.path.string();
-            ImGui::BeginChild(child_id.c_str(), ImVec2(inner_w - sb_w, view_h),
-                              ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
-            bool scroll_pushed = w.scroll_set;   // see details view: avoid stale readback
-            if (w.scroll_set) { ImGui::SetScrollY(w.scroll_y); w.scroll_set = false; }
-            ImDrawList* cdl = ImGui::GetWindowDrawList();
-            ImVec2 origin = ImGui::GetCursorScreenPos();    // scroll-adjusted
-            ImGui::Dummy(ImVec2(1, content_h));             // scroll extent
-            for (int i = 0; i < n; ++i) {
-                const FileEntry& fe = w.entries[i];
-                int r = i / per_row, cidx = i % per_row;
-                ImVec2 cp(origin.x + cidx * cell_w, origin.y + r * cell_h);
-                ImGui::SetCursorScreenPos(cp);
-                ImGui::PushID(i);
-                ImGui::InvisibleButton("##cell", ImVec2(cell_w, cell_h));
-                ImGui::PopID();
-                bool hovered = ImGui::IsItemHovered();
-                if (hovered && ImGui::IsMouseClicked(0)) w.selected = i;
-                if (hovered && ImGui::IsMouseDoubleClicked(0) && fe.is_dir) navigate_to = i;
-
-                ImVec2 ip(cp.x + (cell_w - 32) * 0.5f, cp.y + 3);
-                if (fe.is_dir) icons95::Folder32(cdl, ip);
-                else           icons95::Document32(cdl, ip);
-
-                bool sel = (w.selected == i);
-                ImVec2 ts = ImGui::CalcTextSize(fe.name.c_str());
-                float tw = ts.x < cell_w - 6 ? ts.x : cell_w - 6;
-                ImVec2 tp(cp.x + (cell_w - tw) * 0.5f, cp.y + 39);
-                if (sel)
-                    cdl->AddRectFilled(ImVec2(tp.x - 2, tp.y - 1),
-                                       ImVec2(tp.x + tw + 2, tp.y + ts.y + 1), SEL);
-                ImVec4 tclip(tp.x, tp.y, tp.x + tw, tp.y + ts.y);
-                cdl->AddText(nullptr, 0.0f, tp, sel ? SEL_TEXT : TEXT,
-                             fe.name.c_str(), nullptr, 0.0f, &tclip);
-            }
-            if (!scroll_pushed) w.scroll_y = ImGui::GetScrollY();
-            ImGui::EndChild();
-            if (need_sb) {
-                float ns = ScrollBarV("##vsb", ImVec2(lmax.x - 2 - 16, gy),
-                                      ImVec2(lmax.x - 2, lmax.y - 2),
-                                      view_h, content_h, w.scroll_y);
-                if (ns != w.scroll_y) { w.scroll_y = ns; w.scroll_set = true; }
-            }
-        }
-
+        int navigate_to = (w.view_mode == 0)
+                              ? DrawDetailsView(w, dl, lmin, lmax, inner_w)
+                              : DrawIconsView(w, dl, lmin, lmax, inner_w);
         if (navigate_to >= 0)
             w.Navigate(w.path / w.entries[navigate_to].name);
     }

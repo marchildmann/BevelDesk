@@ -48,23 +48,10 @@ void OpenDisplayProperties(AppState& app) {
 
 void DrawDisplayProperties(AppState& app) {
     if (!app.display_props_open) return;
-    ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    ImVec2 dsz(380, 344);
-    ImVec2 dpos(vp->Pos.x + (vp->Size.x - dsz.x) * 0.5f,
-                vp->Pos.y + (vp->Size.y - dsz.y) * 0.5f - 30);
-    Chrome c;
-    c.title = "Display Properties";
-    c.id = "##displayprops";
-    c.p_open = &app.display_props_open;
-    c.p_minimized = nullptr;
-    c.p_maximized = nullptr;
-    c.request_focus = app.display_props_opened_now;
-    c.dialog = true;
-    c.def_pos = dpos;
-    c.def_size = dsz;
-    c.min_size = dsz;
-    c.max_size = dsz;
+    Chrome c = CenteredDialog("Display Properties", "##displayprops",
+                              &app.display_props_open, app.display_props_opened_now,
+                              ImVec2(380, 344), -30.0f);
     app.display_props_opened_now = false;
 
     bool ok_clicked = false;

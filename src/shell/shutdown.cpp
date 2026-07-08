@@ -39,20 +39,9 @@ void DrawShutdownDialog(AppState& app) {
     ImGui::PopStyleVar(2);
 
     // the dialog itself
-    ImVec2 dsz(320, 150);
-    ImVec2 dpos(vp->Pos.x + (vp->Size.x - dsz.x) * 0.5f,
-                vp->Pos.y + (vp->Size.y - dsz.y) * 0.5f - 20);
-    Chrome c;
-    c.title = "Shut Down Windows";
-    c.id = "##shutdowndlg";
-    c.p_open = &app.shutdown_open;
-    c.p_minimized = nullptr;
-    c.p_maximized = nullptr;
-    c.request_focus = app.shutdown_opened_this_frame;
-    c.dialog = true;
-    c.def_pos = dpos;
-    c.def_size = dsz;
-    c.min_size = dsz;
+    Chrome c = CenteredDialog("Shut Down Windows", "##shutdowndlg",
+                              &app.shutdown_open, app.shutdown_opened_this_frame,
+                              ImVec2(320, 150));
     app.shutdown_opened_this_frame = false;
     if (BeginWindow95(c)) {
         ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());

@@ -42,23 +42,9 @@ static void Execute(AppState& app) {
 
 void DrawRun(AppState& app) {
     if (!app.run_open) return;
-    ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    ImVec2 dsz(360, 148);
-    ImVec2 dpos(vp->Pos.x + (vp->Size.x - dsz.x) * 0.5f,
-                vp->Pos.y + (vp->Size.y - dsz.y) * 0.5f - 40);
-    Chrome c;
-    c.title = "Run";
-    c.id = "##run";
-    c.p_open = &app.run_open;
-    c.p_minimized = nullptr;
-    c.p_maximized = nullptr;
-    c.request_focus = app.run_opened_now;
-    c.dialog = true;
-    c.def_pos = dpos;
-    c.def_size = dsz;
-    c.min_size = dsz;
-    c.max_size = dsz;
+    Chrome c = CenteredDialog("Run", "##run", &app.run_open,
+                              app.run_opened_now, ImVec2(360, 148), -40.0f);
     bool just_opened = app.run_opened_now;
     app.run_opened_now = false;
 

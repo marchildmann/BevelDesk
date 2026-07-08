@@ -13,23 +13,9 @@ void OpenAbout(AppState& app) {
 
 void DrawAbout(AppState& app) {
     if (!app.about_open) return;
-    ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    ImVec2 dsz(340, 190);
-    ImVec2 dpos(vp->Pos.x + (vp->Size.x - dsz.x) * 0.5f,
-                vp->Pos.y + (vp->Size.y - dsz.y) * 0.5f - 20);
-    Chrome c;
-    c.title = "About BevelDesk";
-    c.id = "##about";
-    c.p_open = &app.about_open;
-    c.p_minimized = nullptr;
-    c.p_maximized = nullptr;
-    c.request_focus = app.about_opened_now;
-    c.dialog = true;
-    c.def_pos = dpos;
-    c.def_size = dsz;
-    c.min_size = dsz;
-    c.max_size = dsz;
+    Chrome c = CenteredDialog("About BevelDesk", "##about", &app.about_open,
+                              app.about_opened_now, ImVec2(340, 190));
     app.about_opened_now = false;
 
     if (BeginWindow95(c)) {

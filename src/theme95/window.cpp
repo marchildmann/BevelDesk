@@ -17,6 +17,21 @@ void DebugOpenSysMenu(const char* window_id) {
     g_sysmenu_opened_now = true;
 }
 
+Chrome CenteredDialog(const char* title, const char* id, bool* p_open,
+                      bool request_focus, ImVec2 size, float y_offset) {
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    Chrome c;
+    c.title = title;
+    c.id = id;
+    c.p_open = p_open;
+    c.request_focus = request_focus;
+    c.dialog = true;
+    c.def_size = c.min_size = c.max_size = size;
+    c.def_pos = ImVec2(vp->Pos.x + (vp->Size.x - size.x) * 0.5f,
+                       vp->Pos.y + (vp->Size.y - size.y) * 0.5f + y_offset);
+    return c;
+}
+
 bool BeginWindow95(Chrome& c) {
     ImGuiViewport* vp = ImGui::GetMainViewport();
     bool maximized = c.p_maximized && *c.p_maximized;
