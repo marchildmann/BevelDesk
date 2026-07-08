@@ -1,4 +1,5 @@
 #include "shell/taskbar.h"
+#include "shell/displayprops.h"
 #include "shell/dosprompt.h"
 #include "app/app.h"
 #include "theme95/theme95.h"
@@ -36,7 +37,7 @@ static void DrawStartMenu(AppState& app, float taskbar_top) {
     static const Item items[] = {
         { "Programs", true, false },
         { "Documents", true, false },
-        { "Settings", true, false },
+        { "Settings", false, false },
         { "Find", true, false },
         { "Help", false, false },
         { "MS-DOS Prompt", false, false },
@@ -100,6 +101,8 @@ static void DrawStartMenu(AppState& app, float taskbar_top) {
                 app.shutdown_opened_this_frame = true;
             } else if (label == "MS-DOS Prompt") {
                 OpenDosPrompt(app);
+            } else if (label == "Settings") {
+                OpenDisplayProperties(app);
             }
             app.start_open = false;
         }
@@ -149,7 +152,7 @@ void DrawTaskbarAndStartMenu(AppState& app) {
     if (start_down) BevelPressed(dl, sb_min, sb_max);
     else            BevelRaised(dl, sb_min, sb_max);
     float so = start_down ? 1.0f : 0.0f;
-    icons95::StartFlag(dl, ImVec2(sb_min.x + 4 + so, sb_min.y + 5 + so));
+    icons95::BevelDeskLogo(dl, ImVec2(sb_min.x + 4 + so, sb_min.y + 4 + so));
     float sty = sb_min.y + (btn_h - ImGui::GetFontSize()) * 0.5f;
     AddTextBold(dl, ImVec2(sb_min.x + 23 + so, sty + so), TEXT, "Start");
 

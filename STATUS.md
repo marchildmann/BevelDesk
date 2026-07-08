@@ -50,8 +50,9 @@
 - Font falls back to ProggyClean (monospaced, 1px-overdraw bold) only if no
   system UI font is found; glyphs are grayscale-antialiased, not the exact
   MS Sans Serif bitmaps.
-- Menu bar (File/Edit/View/Help) and Start menu items other than Shut Down
-  and MS-DOS Prompt are decorative; no context menus.
+- Menu bar (File/Edit/View/Help) and Start menu items other than Shut Down,
+  MS-DOS Prompt and Settings (Display Properties) are decorative; no context
+  menus. The chosen desktop color is session-only (no config file yet).
 - MS-DOS Prompt: POSIX only (Windows needs ConPTY); no scroll regions or
   full alt-screen, so full-screen TUIs (vim, htop) render imperfectly —
   line-oriented shell work is solid. No clipboard paste yet; fixed 80x25.

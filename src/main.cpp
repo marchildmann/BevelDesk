@@ -15,6 +15,7 @@
 #include "platform/gl.h"
 #include "platform/platform.h"
 #include "shell/desktop.h"
+#include "shell/displayprops.h"
 #include "shell/dosprompt.h"
 #include "shell/explorer.h"
 #include "shell/shutdown.h"
@@ -118,6 +119,7 @@ int main(int argc, char** argv) {
             g_app.shutdown_open = true;
             g_app.shutdown_opened_this_frame = true;
         }
+        if (demo && std::strcmp(demo, "display") == 0) OpenDisplayProperties(g_app);
     }
 
     int frame = 0;
@@ -151,7 +153,8 @@ int main(int argc, char** argv) {
         DrawExplorers(g_app);
         DrawDosPrompts(g_app);
         DrawTaskbarAndStartMenu(g_app);
-        DrawShutdownDialog(g_app);
+        DrawDisplayProperties(g_app);
+        DrawShutdownDialog(g_app);   // last: its fade covers everything
 
         // Cmd+Q (macOS) / Ctrl+Q exits — fullscreen has no host chrome.
         // Suppressed while a DOS prompt has focus (Ctrl+Q is XON there).

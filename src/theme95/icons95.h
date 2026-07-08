@@ -22,7 +22,7 @@ void UpFolderGlyph(ImDrawList* dl, ImVec2 button_tl);
 void LargeIconsGlyph(ImDrawList* dl, ImVec2 button_tl);
 void DetailsGlyph(ImDrawList* dl, ImVec2 button_tl);
 
-// Windows flag logo, roughly 16x12, for the Start button
-void StartFlag(ImDrawList* dl, ImVec2 p);
+// BevelDesk mark (four beveled tiles, one teal), roughly 13x13, Start button
+void BevelDeskLogo(ImDrawList* dl, ImVec2 p);
 
 } // namespace icons95

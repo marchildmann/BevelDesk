@@ -150,17 +150,19 @@ void DetailsGlyph(ImDrawList* dl, ImVec2 p) {
     }
 }
 
-void StartFlag(ImDrawList* dl, ImVec2 p) {
-    // waving trail
-    dl->AddLine(A(p, 0, 3), A(p, 2, 3), BLACK);
-    dl->AddLine(A(p, 0, 7), A(p, 2, 7), BLACK);
-    dl->AddLine(A(p, 0, 11), A(p, 2, 11), BLACK);
-    // 2x2 panes with 1px gap, black outline
-    dl->AddRectFilled(A(p, 3, 0), A(p, 15, 13), BLACK);
-    dl->AddRectFilled(A(p, 4, 1), A(p, 9, 6), RED);
-    dl->AddRectFilled(A(p, 10, 1), A(p, 14, 6), GREEN);
-    dl->AddRectFilled(A(p, 4, 7), A(p, 9, 12), BLUE);
-    dl->AddRectFilled(A(p, 10, 7), A(p, 14, 12), YELLOW);
+void BevelDeskLogo(ImDrawList* dl, ImVec2 p) {
+    // four raised beveled tiles — the mark IS the bevel; teal = the desk
+    auto tile = [&](float x, float y, ImU32 fill) {
+        dl->AddRectFilled(A(p, x, y), A(p, x + 6, y + 6), fill);
+        dl->AddRectFilled(A(p, x, y), A(p, x + 5, y + 1), HILIGHT);      // top
+        dl->AddRectFilled(A(p, x, y), A(p, x + 1, y + 5), HILIGHT);      // left
+        dl->AddRectFilled(A(p, x, y + 5), A(p, x + 6, y + 6), DKSHADOW); // bottom
+        dl->AddRectFilled(A(p, x + 5, y), A(p, x + 6, y + 6), DKSHADOW); // right
+    };
+    tile(0, 0, DESKTOP);
+    tile(7, 0, FACE);
+    tile(0, 7, FACE);
+    tile(7, 7, FACE);
 }
 
 } // namespace icons95

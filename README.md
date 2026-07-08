@@ -37,6 +37,9 @@ ImGui styling, no image assets, no web views.
 - **Taskbar & Start menu** — live clock, per-window task buttons with
   pressed/active states, and Start ▸ Shut Down… with the iconic dithered
   screen-fade dialog (Restart gives you a fresh desktop).
+- **Display Properties** (Start ▸ Settings) — recolor the desktop from the
+  classic 16-color picker, with a live monitor preview, OK/Cancel semantics
+  included.
 - **Crisp on Retina** — native-resolution rendering with the UI font
   (Tahoma / Microsoft Sans Serif / DejaVu, probed from your system)
   rasterized at monitor density. Fixed 96-dpi metrics, like the original.
