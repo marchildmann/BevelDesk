@@ -84,3 +84,17 @@ Ambiguities resolved autonomously during the mission.
     shutdown), `platform/` OS glue (fonts/GL/screenshot). Headers include
     via component-qualified paths ("theme95/bevel.h"); `theme95/theme95.h`
     is an umbrella. Verified pixel-identical rendering after the move.
+
+14. **Win98 gradient captions** (user request). Win95 used a solid navy
+    caption; we switched to the iconic Windows 98 horizontal gradient
+    (navy #000080 → #1084D0 active, gray → light gray inactive) via
+    `AddRectFilledMultiColor`. A deliberate departure from strict Win95 for
+    the nicer look.
+15. **WebAssembly via Emscripten.** Same source, `#ifdef __EMSCRIPTEN__`
+    branches: main loop → `emscripten_set_main_loop`; WebGL2/GLES3 shaders;
+    GLFW from `-sUSE_GLFW=3`; `ImGui_ImplGlfw_InstallEmscriptenCallbacks` for
+    canvas sizing (without it framebuffer is 0 → blank). Fonts (DejaVu) and a
+    mock filesystem are `--preload-file`'d into MEMFS. Fixed 256MB heap, NOT
+    `ALLOW_MEMORY_GROWTH`: a growable heap is a resizable ArrayBuffer, which
+    recent Chrome's `TextDecoder` rejects (crashed opening the font). The
+    pty/DOS prompt no-ops on web. Deployed to GitHub Pages via `pages.yml`.

@@ -7,6 +7,8 @@
 **A Windows 95–style desktop environment that actually works — built entirely
 with Dear ImGui's DrawList API.**
 
+### ▶ [Try the live demo in your browser](https://marchildmann.github.io/BevelDesk/) &nbsp;(WebAssembly, no install)
+
 Teal desktop, beveled chrome, a real file manager over your actual filesystem,
 and an MS-DOS Prompt running a *live shell* (your zsh) through a pty — every
 bevel, caption bar, scrollbar and icon drawn by hand, pixel by pixel. No stock
@@ -127,6 +129,23 @@ src/
 A future theme (NeXTSTEP, System 7, CDE…) slots in as a sibling of
 `theme95/`; a new program (Notepad, Minesweeper…) is one new `shell/`
 component drawing inside `t95::BeginWindow95`.
+
+## WebAssembly build
+
+The [live demo](https://marchildmann.github.io/BevelDesk/) is the same code
+compiled with Emscripten (`web/` holds the HTML shell, bundled DejaVu fonts,
+and a small mock filesystem for Explorer to browse). To build it locally:
+
+```sh
+source /path/to/emsdk/emsdk_env.sh
+emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release
+cmake --build build-web -j
+python3 -m http.server -d build-web 8000   # then open http://localhost:8000/index.html
+```
+
+The MS-DOS Prompt is native-only (the browser has no pty/`forkpty`); on the
+web it simply doesn't open. Everything else — Explorer, dialogs, zoom, the
+Start menu — runs in the browser.
 
 ## Project docs
 
