@@ -221,6 +221,12 @@ bool BeginWindow95(Chrome& c) {
 
     c.content_min = ImVec2(pos.x + B, tmax.y + 1);
     c.content_max = ImVec2(pmax.x - B, pmax.y - B);
+    // Declare the full client extent up front with a Dummy. Our content is
+    // drawn with absolute SetCursorScreenPos + DrawList; without this, 1.92
+    // warns that later cursor moves "extend window boundaries" without an item.
+    ImGui::SetCursorScreenPos(c.content_min);
+    ImGui::Dummy(ImVec2(c.content_max.x - c.content_min.x,
+                        c.content_max.y - c.content_min.y));
     ImGui::SetCursorScreenPos(c.content_min);
     return true;
 }
