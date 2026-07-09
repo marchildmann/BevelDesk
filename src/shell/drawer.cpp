@@ -103,7 +103,7 @@ static void RenderTerm(AppState& app, DrawerTab& tab, ImDrawList* dl,
     bool hover = io.MousePos.x >= fmin.x && io.MousePos.x <= fmax.x &&
                  io.MousePos.y >= fmin.y && io.MousePos.y <= fmax.y;
     if (hover && !io.KeyCtrl && io.MouseWheel != 0.0f) {
-        tab.scroll_px += io.MouseWheel * chh * 3.0f;   // wheel up = scroll back
+        tab.scroll_px -= io.MouseWheel * chh * 3.0f;   // wheel up = older (scroll back)
         io.MouseWheel = 0.0f;
     }
     if (focused && io.KeyShift) {                       // Shift+PageUp/Down = a page
@@ -188,6 +188,7 @@ void DrawTerminalDrawer(AppState& app, float drawer_top) {
                 app.drawer_active = (int)app.drawer_tabs.size() - 1;
         } else ++i;
     }
+    app.drawer_focused = false;
     if (app.drawer_tabs.empty()) { app.drawer_open = false; return; }
     if (!app.drawer_open) return;
     if (app.drawer_active < 0) app.drawer_active = 0;
@@ -204,7 +205,8 @@ void DrawTerminalDrawer(AppState& app, float drawer_top) {
                  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
                  ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
     ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
-    bool win_focused = ImGui::IsWindowFocused();
+    bool win_focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+    app.drawer_focused = win_focused;
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImVec2 mn = ImGui::GetWindowPos();
     ImVec2 mx(mn.x + vp->Size.x, mn.y + app.drawer_height);

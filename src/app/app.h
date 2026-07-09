@@ -87,6 +87,7 @@ struct AppState {
     // tabbed sessions. Persists (hidden, not killed) across toggles.
     bool drawer_open = false;
     bool drawer_focus_request = false;
+    bool drawer_focused = false;   // drawer has keyboard focus this frame
     float drawer_height = 240.0f;
     std::vector<std::unique_ptr<DrawerTab>> drawer_tabs;
     int drawer_active = 0;

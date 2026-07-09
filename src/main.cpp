@@ -94,7 +94,7 @@ static void MainLoopFrame(void* arg) {
         static const float steps[] = { 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f };
         const int nz = (int)(sizeof(steps) / sizeof(steps[0]));
         bool mod = io.KeyCtrl || io.KeySuper;
-        bool dos_focus = false;
+        bool dos_focus = g_app.drawer_focused;   // don't steal Ctrl-combos from a shell
         for (auto& d : g_app.dos_wins)
             if (d->focused && !d->minimized) dos_focus = true;
         int cur = 0;
@@ -117,8 +117,11 @@ static void MainLoopFrame(void* arg) {
         else if (dir < 0 && cur > 0) g_app.zoom = steps[cur - 1];
     }
 
-    // Ctrl+`  toggles the terminal drawer (dev muscle memory)
-    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_GraveAccent, false))
+    // Toggle the terminal drawer: F12 (layout-independent) or Ctrl+` (US kbd).
+    // ImGuiKey_GraveAccent is the physical US-backtick key, which differs on
+    // non-US layouts — F12 always works.
+    if (ImGui::IsKeyPressed(ImGuiKey_F12, false) ||
+        (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_GraveAccent, false)))
         ToggleDrawer(g_app);
 
     // --demo sysmenu: pop the system menu on the focused explorer
@@ -155,8 +158,9 @@ static void MainLoopFrame(void* arg) {
     DrawRun(g_app);
     DrawShutdownDialog(g_app);   // last: its fade covers everything
 
-    // Cmd+Q (macOS) / Ctrl+Q exits — no effect in the browser.
-    bool dos_focused = false;
+    // Cmd+Q (macOS) / Ctrl+Q exits — no effect in the browser. Suppressed while
+    // a shell (DOS window or the drawer) has focus, so Ctrl+Q reaches it.
+    bool dos_focused = g_app.drawer_focused;
     for (auto& d : g_app.dos_wins)
         if (d->focused && !d->minimized) dos_focused = true;
 #ifndef __EMSCRIPTEN__
