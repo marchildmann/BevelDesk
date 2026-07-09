@@ -2,21 +2,33 @@
 #include "app/app.h"
 #include "theme95/theme95.h"
 #include "imgui_internal.h"
+#include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <string>
 
 using namespace t95;
 
+static DrawerTab* NewTab(AppState& app) {
+    auto t = std::make_unique<DrawerTab>();
+    t->id = app.drawer_next_id++;
+    t->term.Init(80, 24);
+    if (!t->pty.Spawn(80, 24)) return nullptr;   // Windows / WASM: no pty
+    t->spawned = true;
+    app.drawer_tabs.push_back(std::move(t));
+    app.drawer_active = (int)app.drawer_tabs.size() - 1;
+    return app.drawer_tabs.back().get();
+}
+
 void ToggleDrawer(AppState& app) {
     if (!app.drawer_open) {
-        if (!app.drawer_spawned) {
-            app.drawer_term.Init(80, 24);
-            if (app.drawer_pty.Spawn(80, 24)) app.drawer_spawned = true;
+        if (app.drawer_tabs.empty()) NewTab(app);
+        if (!app.drawer_tabs.empty()) {
+            app.drawer_open = true;
+            app.drawer_focus_request = true;
         }
-        app.drawer_open = true;
-        app.drawer_focus_request = true;
     } else {
-        app.drawer_open = false;   // hide, keep the shell running
+        app.drawer_open = false;   // hide, keep the shells running
     }
 }
 
@@ -31,7 +43,6 @@ static void EncodeUtf8(unsigned int cp, std::string& out) {
            out += (char)(0x80 | (cp & 0x3F)); }
 }
 
-// keyboard -> terminal bytes (same subset the MS-DOS Prompt uses)
 static void CollectInput(TermGrid& t, std::string& out) {
     ImGuiIO& io = ImGui::GetIO();
     if (!io.KeyCtrl && !io.KeySuper)
@@ -56,73 +67,31 @@ static void CollectInput(TermGrid& t, std::string& out) {
     if (io.KeyCtrl)
         for (int i = 0; i < 26; ++i)
             if (ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_A + i), true))
-                out += (char)(1 + i);  // ^A..^Z  (^C, ^D, ^L, ...)
+                out += (char)(1 + i);
 }
 
-void DrawTerminalDrawer(AppState& app, float drawer_top) {
-    TermGrid& t = app.drawer_term;
-
-    // pump the shell every frame (even hidden) so it never blocks on a full pipe
-    if (app.drawer_spawned) {
-        char buf[8192]; int n;
-        while ((n = app.drawer_pty.Read(buf, sizeof(buf))) > 0) t.Feed(buf, (size_t)n);
-        if (n == 0) { app.drawer_spawned = false; app.drawer_open = false; } // shell exited
-        if (!t.reply.empty()) { app.drawer_pty.Write(t.reply.data(), t.reply.size()); t.reply.clear(); }
-    }
-    if (!app.drawer_open) return;
-
-    ImGuiViewport* vp = ImGui::GetMainViewport();
-    float dh = app.drawer_height;
-    ImVec2 dmin(vp->Pos.x, drawer_top);
-    ImVec2 dsz(vp->Size.x, dh);
-
-    ImGui::SetNextWindowPos(dmin);
-    ImGui::SetNextWindowSize(dsz);
-    if (app.drawer_focus_request) { ImGui::SetNextWindowFocus(); app.drawer_focus_request = false; }
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::ColorConvertU32ToFloat4(FACE));
-    ImGui::Begin("##drawer", nullptr,
-                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-                 ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
-    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
-    bool focused = ImGui::IsWindowFocused();
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImVec2 mn = ImGui::GetWindowPos();
-    ImVec2 mx(mn.x + dsz.x, mn.y + dsz.y);
-
-    // beveled frame + sunken black terminal field
-    dl->AddRectFilled(mn, mx, FACE);
-    ImVec2 fmin(mn.x + 3, mn.y + 3), fmax(mx.x - 3, mx.y - 3);
-    SunkenField(dl, fmin, fmax, IM_COL32(0, 0, 0, 255));
-
-    // size the grid to the field, tell the shell if it changed
+// Draw the active tab's terminal grid into [gmin, gmax); size it to fit and
+// tell the shell (TIOCSWINSZ) when the cell count changes.
+static void RenderTerm(AppState& app, DrawerTab& tab, ImDrawList* dl,
+                       ImVec2 gmin, ImVec2 gmax, bool focused) {
     ImFont* mono = FontMono ? FontMono : ImGui::GetFont();
     ImGui::PushFont(mono);
     float cw = ImGui::CalcTextSize("M").x;
     float chh = ImGui::GetFontSize() + 2;
-    ImGui::PopFont();
-    float pad = 4;
-    int cols = (int)((fmax.x - fmin.x - pad * 2) / cw);
-    int rows = (int)((fmax.y - fmin.y - pad * 2) / chh);
-    if (cols < 20) cols = 20; if (rows < 4) rows = 4;
-    if (cols != app.drawer_cols || rows != app.drawer_rows) {
-        app.drawer_cols = cols; app.drawer_rows = rows;
-        t.Init(cols, rows);
-        app.drawer_pty.Resize(cols, rows);
+    int cols = (int)((gmax.x - gmin.x) / cw);
+    int rows = (int)((gmax.y - gmin.y) / chh);
+    if (cols < 20) cols = 20; if (rows < 3) rows = 3;
+    if (cols != tab.cols || rows != tab.rows) {
+        tab.cols = cols; tab.rows = rows;
+        tab.term.Init(cols, rows);
+        tab.pty.Resize(cols, rows);
     }
-
-    // keyboard -> shell (only when the drawer has focus)
+    TermGrid& t = tab.term;
     if (focused) {
         std::string out;
         CollectInput(t, out);
-        if (!out.empty()) app.drawer_pty.Write(out.data(), out.size());
+        if (!out.empty()) tab.pty.Write(out.data(), out.size());
     }
-
-    // render the live screen (bottom-anchored; scrollback not shown here)
-    ImVec2 gmin(fmin.x + pad, fmin.y + pad);
-    ImGui::PushFont(mono);
     for (int r = 0; r < t.rows; ++r) {
         const TermCell* row = t.Row(r);
         float ry = gmin.y + r * chh;
@@ -141,15 +110,124 @@ void DrawTerminalDrawer(AppState& app, float drawer_top) {
             x = end;
         }
     }
-    // blinking block cursor
     if (t.cursor_visible && focused && std::fmod(ImGui::GetTime(), 1.0) < 0.6) {
         float cxp = gmin.x + t.cx * cw, cyp = gmin.y + t.cy * chh;
         dl->AddRectFilled(ImVec2(cxp, cyp), ImVec2(cxp + cw, cyp + chh),
                           IM_COL32(170, 170, 170, 255));
     }
     ImGui::PopFont();
+}
+
+void DrawTerminalDrawer(AppState& app, float drawer_top) {
+    // pump EVERY tab's shell each frame (even hidden), and reap exited ones
+    for (size_t i = 0; i < app.drawer_tabs.size();) {
+        DrawerTab& tab = *app.drawer_tabs[i];
+        bool exited = false;
+        if (tab.spawned) {
+            char buf[8192]; int n;
+            while ((n = tab.pty.Read(buf, sizeof(buf))) > 0) tab.term.Feed(buf, (size_t)n);
+            if (n == 0) exited = true;
+            if (!tab.term.reply.empty()) {
+                tab.pty.Write(tab.term.reply.data(), tab.term.reply.size());
+                tab.term.reply.clear();
+            }
+        }
+        if (exited) {
+            app.drawer_tabs.erase(app.drawer_tabs.begin() + (long)i);
+            if (app.drawer_active >= (int)app.drawer_tabs.size())
+                app.drawer_active = (int)app.drawer_tabs.size() - 1;
+        } else ++i;
+    }
+    if (app.drawer_tabs.empty()) { app.drawer_open = false; return; }
+    if (!app.drawer_open) return;
+    if (app.drawer_active < 0) app.drawer_active = 0;
+
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(vp->Pos.x, drawer_top));
+    ImGui::SetNextWindowSize(ImVec2(vp->Size.x, app.drawer_height));
+    if (app.drawer_focus_request) { ImGui::SetNextWindowFocus(); app.drawer_focus_request = false; }
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::ColorConvertU32ToFloat4(FACE));
+    ImGui::Begin("##drawer", nullptr,
+                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+                 ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
+    bool win_focused = ImGui::IsWindowFocused();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImVec2 mn = ImGui::GetWindowPos();
+    ImVec2 mx(mn.x + vp->Size.x, mn.y + app.drawer_height);
+    dl->AddRectFilled(mn, mx, FACE);
+
+    // ---- tab strip ----
+    const float th = 21;
+    float tabx = mn.x + 3, taby = mn.y + 3;
+    int close_tab = -1, new_tab = 0;
+    for (int i = 0; i < (int)app.drawer_tabs.size(); ++i) {
+        bool active = (i == app.drawer_active);
+        float tw = 104;
+        ImVec2 t0(tabx, taby), t1(tabx + tw, taby + th);
+        ImGui::SetCursorScreenPos(t0);
+        ImGui::PushID(app.drawer_tabs[i]->id);
+        bool clicked = ImGui::InvisibleButton("##tab", ImVec2(tw, th));
+        ImGui::PopID();
+        if (active) BevelPressed(dl, t0, t1); else BevelRaised(dl, t0, t1);
+        float o = active ? 1.0f : 0.0f;
+        char label[24]; std::snprintf(label, sizeof(label), "Terminal %d", app.drawer_tabs[i]->id);
+        ImVec4 clip(t0.x + 6, t0.y, t1.x - 18, t1.y);
+        dl->AddText(nullptr, 0.0f, ImVec2(t0.x + 7 + o, t0.y + 4 + o), TEXT, label, nullptr, 0.0f, &clip);
+        // per-tab close box
+        ImVec2 xb0(t1.x - 16, t0.y + 4), xb1(t1.x - 5, t0.y + 15);
+        ImGui::SetCursorScreenPos(xb0);
+        ImGui::PushID(1000 + app.drawer_tabs[i]->id);
+        bool xclick = ImGui::InvisibleButton("##x", ImVec2(11, 11));
+        ImGui::PopID();
+        dl->AddLine(ImVec2(xb0.x + 2, xb0.y + 2), ImVec2(xb1.x - 2, xb1.y - 2), TEXT);
+        dl->AddLine(ImVec2(xb1.x - 2, xb0.y + 2), ImVec2(xb0.x + 2, xb1.y - 2), TEXT);
+        if (xclick) close_tab = i;
+        else if (clicked) { app.drawer_active = i; app.drawer_focus_request = true; }
+        tabx += tw + 2;
+    }
+    // "+" new-tab button
+    {
+        ImVec2 p0(tabx, taby), p1(tabx + th, taby + th);
+        ImGui::SetCursorScreenPos(p0);
+        bool add = ImGui::InvisibleButton("##newtab", ImVec2(th, th));
+        bool held = ImGui::IsItemActive() && ImGui::IsItemHovered();
+        if (held) BevelPressed(dl, p0, p1); else BevelRaised(dl, p0, p1);
+        float cx = (p0.x + p1.x) * 0.5f, cy = (p0.y + p1.y) * 0.5f;
+        dl->AddLine(ImVec2(cx - 4, cy), ImVec2(cx + 4, cy), TEXT);
+        dl->AddLine(ImVec2(cx, cy - 4), ImVec2(cx, cy + 4), TEXT);
+        if (add) new_tab = 1;
+    }
+
+    // Cmd+T new tab / Cmd+W close tab when focused (won't reach the shell)
+    if (win_focused) {
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.KeySuper && ImGui::IsKeyPressed(ImGuiKey_T, false)) new_tab = 1;
+        if (io.KeySuper && ImGui::IsKeyPressed(ImGuiKey_W, false)) close_tab = app.drawer_active;
+    }
+
+    // ---- terminal field for the active tab ----
+    ImVec2 fmin(mn.x + 3, taby + th + 3), fmax(mx.x - 3, mx.y - 3);
+    SunkenField(dl, fmin, fmax, IM_COL32(0, 0, 0, 255));
+    float pad = 4;
+    RenderTerm(app, *app.drawer_tabs[app.drawer_active], dl,
+               ImVec2(fmin.x + pad, fmin.y + pad), ImVec2(fmax.x - pad, fmax.y - pad),
+               win_focused);
 
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
+
+    // apply tab add/close after drawing (avoid mutating mid-iteration)
+    if (new_tab) NewTab(app);
+    if (close_tab >= 0 && close_tab < (int)app.drawer_tabs.size()) {
+        app.drawer_tabs.erase(app.drawer_tabs.begin() + close_tab);
+        if (app.drawer_active >= (int)app.drawer_tabs.size())
+            app.drawer_active = (int)app.drawer_tabs.size() - 1;
+        if (app.drawer_tabs.empty()) app.drawer_open = false;
+        else app.drawer_focus_request = true;
+    }
 }

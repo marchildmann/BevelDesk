@@ -157,6 +157,23 @@ void DrawTaskbarAndStartMenu(AppState& app) {
     dl->AddRectFilled(mn, mx, FACE);
     dl->AddRectFilled(ImVec2(mn.x, mn.y), ImVec2(mx.x, mn.y + 1), HILIGHT); // top edge
 
+    // when the drawer is open, the taskbar's top edge is a resize splitter
+    if (app.drawer_open) {
+        ImGui::SetCursorScreenPos(ImVec2(mn.x, mn.y - 2));
+        ImGui::InvisibleButton("##drawer_resize", ImVec2(mx.x - mn.x, 5));
+        if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        if (ImGui::IsItemActive()) {
+            app.drawer_height -= ImGui::GetIO().MouseDelta.y;   // drag up = taller
+            float maxh = vp->Size.y - TASKBAR_H - 80;
+            if (app.drawer_height < 80) app.drawer_height = 80;
+            if (app.drawer_height > maxh) app.drawer_height = maxh;
+        }
+        // centered grip
+        float gx = (mn.x + mx.x) * 0.5f;
+        dl->AddRectFilled(ImVec2(gx - 16, mn.y + 2), ImVec2(gx + 16, mn.y + 3), SHADOW);
+    }
+
     const float btn_y = mn.y + 4, btn_h = 22;
 
     // ---- Start button ----

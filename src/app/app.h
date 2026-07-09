@@ -56,6 +56,15 @@ struct DosWin {
     TermGrid term;
 };
 
+// One tab in the terminal drawer: a shell on a pty + its terminal grid.
+struct DrawerTab {
+    int id = 0;
+    Pty pty;
+    TermGrid term;
+    int cols = 0, rows = 0;   // current grid size (detect resize)
+    bool spawned = false;
+};
+
 struct AppState {
     std::vector<ExplorerWin> wins;
     std::vector<std::unique_ptr<DosWin>> dos_wins;
@@ -70,16 +79,16 @@ struct AppState {
     // UI zoom (Ctrl/Cmd + wheel, or +/-/0). 1.92 dynamic fonts rebake crisply.
     float zoom = 1.0f;
 
-    // Terminal drawer — BevelDesk original: a live shell docked below the
+    // Terminal drawer — BevelDesk original: live shells docked below the
     // taskbar (the taskbar becomes its handle/lid). Toggle with the button
-    // next to Start or Ctrl+`. Persists (hidden, not killed) across toggles.
+    // next to Start or Ctrl+`; drag the taskbar edge to resize; multiple
+    // tabbed sessions. Persists (hidden, not killed) across toggles.
     bool drawer_open = false;
-    bool drawer_spawned = false;
     bool drawer_focus_request = false;
     float drawer_height = 240.0f;
-    int drawer_cols = 0, drawer_rows = 0;   // current grid size (detect resize)
-    Pty drawer_pty;
-    TermGrid drawer_term;
+    std::vector<std::unique_ptr<DrawerTab>> drawer_tabs;
+    int drawer_active = 0;
+    int drawer_next_id = 1;
 
     // desktop appearance
     ImU32 desktop_color = IM_COL32(0, 128, 128, 255);   // the teal, changeable
