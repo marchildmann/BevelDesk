@@ -232,7 +232,7 @@ void DrawTaskbarAndStartMenu(AppState& app) {
         const char* title;
         bool* minimized;
         bool* focused;
-        bool* request_focus;
+        int* request_focus;
         void (*icon)(ImDrawList*, ImVec2);
     };
     std::vector<TaskEntry> entries;
@@ -275,12 +275,12 @@ void DrawTaskbarAndStartMenu(AppState& app) {
             if (clicked) {
                 if (*e.minimized) {
                     *e.minimized = false;
-                    *e.request_focus = true;
+                    *e.request_focus = kRefocusFrames;
                     app.active_win_id = e.id;
                 } else if (app.active_win_id == e.id && *e.focused) {
                     *e.minimized = true;
                 } else {
-                    *e.request_focus = true;
+                    *e.request_focus = kRefocusFrames;
                     app.active_win_id = e.id;
                 }
             }

@@ -20,7 +20,7 @@ void OpenDosPrompt(AppState& app) {
     if (!w->pty.Spawn(w->term.cols, w->term.rows)) return; // Windows / failure
     int n = (int)app.dos_wins.size();
     w->def_pos = ImVec2(160.0f + 26.0f * n, 120.0f + 26.0f * n);
-    w->request_focus = true;
+    w->request_focus = kRefocusFrames;
     app.active_win_id = w->id;
     app.dos_wins.push_back(std::move(w));
 }
@@ -107,12 +107,12 @@ static void DrawDosPrompt(AppState& app, DosWin& w) {
     c.p_minimized = &w.minimized;
     c.p_maximized = nullptr;              // fixed 80x25, like the real thing
     c.console = true;                     // system menu gains "Properties"
-    c.request_focus = w.request_focus;
+    c.request_focus = w.request_focus > 0 && !app.ModalOpen();
     c.def_pos = w.def_pos;
     c.def_size = win_size;
     c.min_size = win_size;
     c.max_size = win_size;
-    w.request_focus = false;
+    if (w.request_focus > 0) --w.request_focus;
 
     if (!BeginWindow95(c)) { EndWindow95(); return; }
     w.focused = c.focused;

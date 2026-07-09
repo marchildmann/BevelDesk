@@ -15,6 +15,13 @@ struct FileEntry {
     bool is_dir = false;
 };
 
+// Frames a freshly-opened/raised window keeps asserting focus. One-shot focus
+// loses an intermittent race: launching from the Start menu, the menu closing
+// restores focus to the taskbar and can steal it back the next frame, so the
+// window opens un-focused (you'd have to click it to type). Re-asserting for a
+// few frames rides out that one-time restore. See DrawDosPrompt / DrawExplorer.
+constexpr int kRefocusFrames = 3;
+
 struct ExplorerWin {
     int id = 0;
     std::string imgui_id;                 // "##explorer<N>" — stable ImGui identity
@@ -24,7 +31,7 @@ struct ExplorerWin {
     bool minimized = false;
     bool maximized = false;
     bool focused = false;
-    bool request_focus = false;
+    int request_focus = 0;                // frames left to assert focus (see kRefocusFrames)
     bool dirty = true;                    // rescan directory next frame
     int selected = -1;
     int view_mode = 0;                    // 0 = Details, 1 = Large Icons
@@ -48,7 +55,7 @@ struct DosWin {
     bool open = true;
     bool minimized = false;
     bool focused = false;
-    bool request_focus = false;
+    int request_focus = 0;                // frames left to assert focus (see kRefocusFrames)
     float scroll_px = 0;                  // scrollback view offset (px)
     bool stick_bottom = true;             // follow output
     ImVec2 def_pos;
@@ -123,6 +130,12 @@ struct AppState {
     ImTextureID checker_tex = (ImTextureID)0; // 2x2 dither for the screen fade
 
     void OpenExplorer(const std::filesystem::path& p);
+
+    // A modal-ish dialog is up and owns focus. A freshly-opened window must not
+    // re-assert focus (kRefocusFrames) over it, or it steals the dialog's caption.
+    bool ModalOpen() const {
+        return display_props_open || about_open || run_open || shutdown_open;
+    }
 };
 
 extern AppState g_app;

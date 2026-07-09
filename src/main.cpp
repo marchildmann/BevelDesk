@@ -134,7 +134,7 @@ static void MainLoopFrame(void* arg) {
         ctx.frame == 3 && g_app.wins.size() >= 2) {
         g_app.wins[0].Navigate("/usr");
         g_app.wins[1].minimized = true;
-        g_app.wins[0].request_focus = true;
+        g_app.wins[0].request_focus = kRefocusFrames;
         g_app.active_win_id = g_app.wins[0].id;
     }
 

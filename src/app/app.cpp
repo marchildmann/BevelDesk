@@ -25,7 +25,7 @@ void AppState::OpenExplorer(const fs::path& p) {
     int n = (int)wins.size();
     w.def_pos = ImVec2(90.0f + 26.0f * n, 70.0f + 26.0f * n);
     w.def_size = ImVec2(460, 340);
-    w.request_focus = true;
+    w.request_focus = kRefocusFrames;
     w.Navigate(p);
     wins.push_back(std::move(w));
     active_win_id = wins.back().id;

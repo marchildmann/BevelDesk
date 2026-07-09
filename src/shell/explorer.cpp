@@ -289,10 +289,10 @@ static void DrawExplorer(AppState& app, ExplorerWin& w) {
     c.p_maximized = &w.maximized;
     c.p_norm_pos = &w.norm_pos;
     c.p_norm_size = &w.norm_size;
-    c.request_focus = w.request_focus;
+    c.request_focus = w.request_focus > 0 && !app.ModalOpen();
     c.def_pos = w.def_pos;
     c.def_size = w.def_size;
-    w.request_focus = false;
+    if (w.request_focus > 0) --w.request_focus;
 
     bool vis = BeginWindow95(c);
     if (!vis) { EndWindow95(); return; }
