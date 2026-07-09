@@ -63,6 +63,8 @@ struct DrawerTab {
     TermGrid term;
     int cols = 0, rows = 0;   // current grid size (detect resize)
     bool spawned = false;
+    float scroll_px = 0;      // scrollback view offset (px from top)
+    bool stick_bottom = true; // follow live output
 };
 
 struct AppState {

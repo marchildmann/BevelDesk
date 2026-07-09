@@ -70,31 +70,71 @@ static void CollectInput(TermGrid& t, std::string& out) {
                 out += (char)(1 + i);
 }
 
-// Draw the active tab's terminal grid into [gmin, gmax); size it to fit and
-// tell the shell (TIOCSWINSZ) when the cell count changes.
+// Draw the active tab into the sunken field [fmin, fmax]: size the grid to
+// fit, render scrollback + live screen, a Win95 scrollbar, and handle scroll
+// input (mouse wheel, Shift+PageUp/Down). got_output = shell printed this frame.
 static void RenderTerm(AppState& app, DrawerTab& tab, ImDrawList* dl,
-                       ImVec2 gmin, ImVec2 gmax, bool focused) {
+                       ImVec2 fmin, ImVec2 fmax, bool focused, bool got_output) {
     ImFont* mono = FontMono ? FontMono : ImGui::GetFont();
     ImGui::PushFont(mono);
     float cw = ImGui::CalcTextSize("M").x;
     float chh = ImGui::GetFontSize() + 2;
+    ImGui::PopFont();
+    TermGrid& t = tab.term;
+
+    const float pad = 4;
+    const float sb_w = 16.0f;   // always reserve scrollbar width so appearing
+                                // scrollback doesn't change cols (and re-init)
+    ImVec2 gmin(fmin.x + pad, fmin.y + pad);
+    ImVec2 gmax(fmax.x - pad - sb_w, fmax.y - pad);
+
     int cols = (int)((gmax.x - gmin.x) / cw);
     int rows = (int)((gmax.y - gmin.y) / chh);
     if (cols < 20) cols = 20; if (rows < 3) rows = 3;
     if (cols != tab.cols || rows != tab.rows) {
         tab.cols = cols; tab.rows = rows;
-        tab.term.Init(cols, rows);
-        tab.pty.Resize(cols, rows);
+        t.Init(cols, rows); tab.pty.Resize(cols, rows);
     }
-    TermGrid& t = tab.term;
+
+    // ---- scroll bookkeeping (scroll_px in [0, scrollback*chh]; bottom = live) ----
+    float max_scroll = (float)t.scrollback.size() * chh;
+    if (got_output && tab.stick_bottom) tab.scroll_px = max_scroll;
+    ImGuiIO& io = ImGui::GetIO();
+    bool hover = io.MousePos.x >= fmin.x && io.MousePos.x <= fmax.x &&
+                 io.MousePos.y >= fmin.y && io.MousePos.y <= fmax.y;
+    if (hover && !io.KeyCtrl && io.MouseWheel != 0.0f) {
+        tab.scroll_px += io.MouseWheel * chh * 3.0f;   // wheel up = scroll back
+        io.MouseWheel = 0.0f;
+    }
+    if (focused && io.KeyShift) {                       // Shift+PageUp/Down = a page
+        float page = rows * chh;
+        if (ImGui::IsKeyPressed(ImGuiKey_PageUp, true)) tab.scroll_px -= page;
+        if (ImGui::IsKeyPressed(ImGuiKey_PageDown, true)) tab.scroll_px += page;
+    }
+    if (tab.scroll_px < 0) tab.scroll_px = 0;
+    if (tab.scroll_px > max_scroll) tab.scroll_px = max_scroll;
+    tab.stick_bottom = tab.scroll_px >= max_scroll - 0.5f;
+
+    // typing snaps back to the live screen
     if (focused) {
-        std::string out;
-        CollectInput(t, out);
-        if (!out.empty()) tab.pty.Write(out.data(), out.size());
+        std::string out; CollectInput(t, out);
+        if (!out.empty()) {
+            tab.pty.Write(out.data(), out.size());
+            tab.scroll_px = max_scroll; tab.stick_bottom = true;
+        }
     }
-    for (int r = 0; r < t.rows; ++r) {
-        const TermCell* row = t.Row(r);
-        float ry = gmin.y + r * chh;
+
+    // ---- render scrollback + live screen ----
+    ImGui::PushFont(mono);
+    int first_line = (int)(tab.scroll_px / chh + 0.5f);
+    int total_lines = (int)t.scrollback.size() + t.rows;
+    for (int vr = 0; vr < t.rows; ++vr) {
+        int line = first_line + vr;
+        if (line >= total_lines) break;
+        const TermCell* row = (line < (int)t.scrollback.size())
+                                  ? t.scrollback[(size_t)line].data()
+                                  : t.Row(line - (int)t.scrollback.size());
+        float ry = gmin.y + vr * chh;
         int x = 0;
         while (x < t.cols) {
             uint8_t fg = row[x].fg, bg = row[x].bg;
@@ -110,28 +150,38 @@ static void RenderTerm(AppState& app, DrawerTab& tab, ImDrawList* dl,
             x = end;
         }
     }
-    if (t.cursor_visible && focused && std::fmod(ImGui::GetTime(), 1.0) < 0.6) {
-        float cxp = gmin.x + t.cx * cw, cyp = gmin.y + t.cy * chh;
-        dl->AddRectFilled(ImVec2(cxp, cyp), ImVec2(cxp + cw, cyp + chh),
-                          IM_COL32(170, 170, 170, 255));
+    bool at_bottom = tab.scroll_px >= max_scroll - 0.5f;
+    if (t.cursor_visible && at_bottom && focused && std::fmod(ImGui::GetTime(), 1.0) < 0.6) {
+        float cxp = gmin.x + t.cx * cw, cyp = gmin.y + (t.scrollback.size() + t.cy - first_line) * chh;
+        dl->AddRectFilled(ImVec2(cxp, cyp), ImVec2(cxp + cw, cyp + chh), IM_COL32(170, 170, 170, 255));
     }
     ImGui::PopFont();
+
+    // ---- Win95 scrollbar (always present; full thumb when nothing to scroll) ----
+    {
+        float ns = ScrollBarV("##drawersb", ImVec2(fmax.x - 2 - 16, fmin.y + 2),
+                              ImVec2(fmax.x - 2, fmax.y - 2),
+                              t.rows * chh, total_lines * chh, tab.scroll_px);
+        if (ns != tab.scroll_px) { tab.scroll_px = ns; tab.stick_bottom = ns >= max_scroll - 0.5f; }
+    }
 }
 
 void DrawTerminalDrawer(AppState& app, float drawer_top) {
     // pump EVERY tab's shell each frame (even hidden), and reap exited ones
+    bool active_got_output = false;
     for (size_t i = 0; i < app.drawer_tabs.size();) {
         DrawerTab& tab = *app.drawer_tabs[i];
-        bool exited = false;
+        bool exited = false, got = false;
         if (tab.spawned) {
             char buf[8192]; int n;
-            while ((n = tab.pty.Read(buf, sizeof(buf))) > 0) tab.term.Feed(buf, (size_t)n);
+            while ((n = tab.pty.Read(buf, sizeof(buf))) > 0) { tab.term.Feed(buf, (size_t)n); got = true; }
             if (n == 0) exited = true;
             if (!tab.term.reply.empty()) {
                 tab.pty.Write(tab.term.reply.data(), tab.term.reply.size());
                 tab.term.reply.clear();
             }
         }
+        if ((int)i == app.drawer_active && got) active_got_output = true;
         if (exited) {
             app.drawer_tabs.erase(app.drawer_tabs.begin() + (long)i);
             if (app.drawer_active >= (int)app.drawer_tabs.size())
@@ -217,10 +267,8 @@ void DrawTerminalDrawer(AppState& app, float drawer_top) {
     // ---- terminal field for the active tab ----
     ImVec2 fmin(mn.x + 3, taby + th + 3), fmax(mx.x - 3, mx.y - 3);
     SunkenField(dl, fmin, fmax, IM_COL32(0, 0, 0, 255));
-    float pad = 4;
-    RenderTerm(app, *app.drawer_tabs[app.drawer_active], dl,
-               ImVec2(fmin.x + pad, fmin.y + pad), ImVec2(fmax.x - pad, fmax.y - pad),
-               win_focused);
+    RenderTerm(app, *app.drawer_tabs[app.drawer_active], dl, fmin, fmax,
+               win_focused, active_got_output);
 
     ImGui::End();
     ImGui::PopStyleColor();
