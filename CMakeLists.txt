@@ -58,6 +58,7 @@ add_executable(beveldesk
   src/main.cpp
   src/app/app.cpp
   src/app/term.cpp
+  src/theme95/palette.cpp
   src/theme95/bevel.cpp
   src/theme95/widgets.cpp
   src/theme95/window.cpp

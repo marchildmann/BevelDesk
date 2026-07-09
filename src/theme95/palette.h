@@ -1,29 +1,19 @@
-// Theme95 palette + metrics — the Windows 95 "Windows Standard" scheme.
+// Theme95 palette + metrics. The chrome colors are reassignable globals so the
+// desktop can switch schemes (Silver / NeXT Night) at runtime — every drawing
+// call site reads these unchanged; ApplyScheme() swaps their values. See
+// palette.cpp and PLAN_NEXT.md.
 #pragma once
 #include "imgui.h"
 
 namespace t95 {
 
-// ---- system colors ----------------------------------------------------------
-constexpr ImU32 FACE        = IM_COL32(192, 192, 192, 255); // ButtonFace
-constexpr ImU32 LIGHT       = IM_COL32(223, 223, 223, 255); // 3DLight
-constexpr ImU32 HILIGHT     = IM_COL32(255, 255, 255, 255); // ButtonHighlight
-constexpr ImU32 SHADOW      = IM_COL32(128, 128, 128, 255); // ButtonShadow
-constexpr ImU32 DKSHADOW    = IM_COL32(0, 0, 0, 255);       // ButtonDkShadow
-constexpr ImU32 BLACK       = IM_COL32(0, 0, 0, 255);
-constexpr ImU32 TITLE_ACT    = IM_COL32(0, 0, 128, 255);     // ActiveTitle (navy)
-constexpr ImU32 TITLE_ACT2   = IM_COL32(16, 132, 208, 255);  // GradientActiveTitle end
-constexpr ImU32 TITLE_INACT  = IM_COL32(128, 128, 128, 255); // InactiveTitle
-constexpr ImU32 TITLE_INACT2 = IM_COL32(181, 181, 181, 255); // GradientInactiveTitle end
-constexpr ImU32 TITLE_TEXT   = IM_COL32(255, 255, 255, 255);
-constexpr ImU32 DESKTOP     = IM_COL32(0, 128, 128, 255);   // teal
-constexpr ImU32 WINBG       = IM_COL32(255, 255, 255, 255); // Window
-constexpr ImU32 TEXT        = IM_COL32(0, 0, 0, 255);
-constexpr ImU32 GRAYTEXT    = IM_COL32(128, 128, 128, 255);
-constexpr ImU32 SEL         = IM_COL32(0, 0, 128, 255);     // Highlight
-constexpr ImU32 SEL_TEXT    = IM_COL32(255, 255, 255, 255);
+// ---- themeable chrome colors (defined in palette.cpp; default = Silver) -----
+extern ImU32 FACE, LIGHT, HILIGHT, SHADOW, DKSHADOW;
+extern ImU32 TITLE_ACT, TITLE_ACT2, TITLE_INACT, TITLE_INACT2, TITLE_TEXT;
+extern ImU32 DESKTOP, WINBG, TEXT, GRAYTEXT, SEL, SEL_TEXT;
 
-// ---- VGA accents for icons / logo --------------------------------------------
+// ---- fixed colors: semantic, not chrome — never change per scheme ----------
+constexpr ImU32 BLACK    = IM_COL32(0, 0, 0, 255);
 constexpr ImU32 RED      = IM_COL32(255, 0, 0, 255);
 constexpr ImU32 GREEN    = IM_COL32(0, 128, 0, 255);
 constexpr ImU32 BLUE     = IM_COL32(0, 0, 255, 255);
@@ -37,5 +27,20 @@ constexpr float WIN_BORDER = 4.0f;   // sizing border thickness
 constexpr float TASKBAR_H  = 28.0f;
 constexpr float CAPBTN_W   = 16.0f;
 constexpr float CAPBTN_H   = 14.0f;
+
+// ---- schemes ----------------------------------------------------------------
+struct Palette {
+    ImU32 face, light, hilight, shadow, dkshadow;
+    ImU32 title_act, title_act2, title_inact, title_inact2, title_text;
+    ImU32 desktop, winbg, text, graytext, sel, sel_text;
+};
+struct Style { bool chiseled = false; };   // NeXT-style black keyline (room to grow)
+
+extern const Palette Palette95;     // Silver — the exact Win95 values
+extern const Palette PaletteNight;  // charcoal dark mode
+extern Style Sty;                   // active style flags
+
+// Swap the active scheme: reassigns the color globals and re-applies ImGui style.
+void ApplyScheme(const Palette& p, const Style& s);
 
 } // namespace t95
