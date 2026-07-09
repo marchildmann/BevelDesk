@@ -54,12 +54,17 @@ void LoadFonts(ImGuiIO& io, float density) {
     cfg.OversampleV = 1;
     cfg.PixelSnapH = true;
     cfg.RasterizerDensity = density > 1.0f ? density : 1.0f;
+    // Terminal font: prefer faces with FULL box-drawing / block / geometric /
+    // arrow coverage (the glyphs TUIs like Claude Code, vim, htop use). ImGui
+    // renders '?' for any glyph the font lacks, so coverage matters more than
+    // "native look" here. Menlo (macOS) / Consolas (Windows) / DejaVu (Linux)
+    // are all Bitstream-Vera-complete; Monaco/Courier are NOT — hence the order.
     static const char* mono[] = {
 #if defined(__EMSCRIPTEN__)
         "/fonts/DejaVuSansMono.ttf",
 #elif defined(__APPLE__)
-        "/System/Library/Fonts/Monaco.ttf",
-        "/System/Library/Fonts/Menlo.ttc",
+        "/System/Library/Fonts/Menlo.ttc",       // full coverage (Vera lineage)
+        "/System/Library/Fonts/Monaco.ttf",       // fallback (sparse coverage)
         "/System/Library/Fonts/Supplemental/Courier New.ttf",
 #elif defined(_WIN32)
         "C:\\Windows\\Fonts\\consola.ttf",
