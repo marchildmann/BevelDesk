@@ -47,14 +47,19 @@ void OpenDisplayProperties(AppState& app) {
     app.display_props_scheme_orig = app.scheme;       // revert target for the scheme
 }
 
-// Selecting a scheme in the Appearance tab: swap the live theme and move the
-// desktop to that scheme's default background (keeps chrome + desktop coherent).
+// Selecting a scheme in the Appearance tab swaps the live theme. If the desktop
+// was still on the outgoing scheme's default background, move it to the new
+// scheme's default so chrome + desktop stay coherent — but a background the user
+// deliberately picked is preserved across the switch.
 static void SelectScheme(AppState& app, int s) {
     if (s == app.scheme) return;
+    bool bg_was_default = (app.desktop_color == t95::DESKTOP);   // t95::DESKTOP = old scheme default
     app.scheme = s;
     t95::ApplyScheme(app.scheme);
-    app.desktop_color = t95::DESKTOP;
-    app.display_props_pending = t95::DESKTOP;   // Background preview follows the scheme
+    if (bg_was_default) {
+        app.desktop_color = t95::DESKTOP;           // now the new scheme's default
+        app.display_props_pending = t95::DESKTOP;   // Background preview follows along
+    }
 }
 
 void DrawDisplayProperties(AppState& app) {
@@ -72,8 +77,9 @@ void DrawDisplayProperties(AppState& app) {
         ImVec2 cm = c.content_min;
         float cw = c.content_max.x - cm.x;
 
-        // ---- tab strip over a page panel (Background active; the rest are
-        //      authentic decorative tabs, like the real Display Properties) ----
+        // ---- tab strip over a page panel. Background + Appearance carry content;
+        //      Screen Saver + Settings are authentic-but-decorative, as on the
+        //      real Display Properties sheet. ----
         float pad = 8;
         ImVec2 page_mn(cm.x + pad, cm.y + 28);
         ImVec2 page_mx(c.content_max.x - pad, c.content_max.y - 44);

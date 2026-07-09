@@ -15,13 +15,9 @@ extern ImU32 FOLDER, FOLDER_EDGE, FOLDER_SHADE;   // folder fill + outline + inn
 extern ImU32 ACCENT;                // small UI accent (view-mode glyphs); steel in Night
 
 // ---- fixed colors: semantic, not chrome — never change per scheme ----------
-constexpr ImU32 BLACK    = IM_COL32(0, 0, 0, 255);
-constexpr ImU32 RED      = IM_COL32(255, 0, 0, 255);
-constexpr ImU32 GREEN    = IM_COL32(0, 128, 0, 255);
-constexpr ImU32 BLUE     = IM_COL32(0, 0, 255, 255);
-constexpr ImU32 YELLOW   = IM_COL32(255, 255, 0, 255);
-constexpr ImU32 NAVY     = IM_COL32(0, 0, 128, 255);
-constexpr ImU32 DKYELLOW = IM_COL32(128, 128, 0, 255);
+constexpr ImU32 BLACK = IM_COL32(0, 0, 0, 255);
+constexpr ImU32 GREEN = IM_COL32(0, 128, 0, 255);   // My Computer power LED
+constexpr ImU32 NAVY  = IM_COL32(0, 0, 128, 255);   // My Computer screen
 
 // ---- metrics (96 dpi Win95 defaults) ------------------------------------------
 constexpr float TITLEBAR_H = 18.0f;
@@ -39,6 +35,8 @@ struct Palette {
 };
 struct Style { bool chiseled = false; };   // NeXT-style black keyline (room to grow)
 
+enum Scheme { SchemeSilver = 0, SchemeNight = 1 };   // also the Appearance list order
+
 extern const Palette Palette95;     // Silver — the exact Win95 values
 extern const Palette PaletteNight;  // charcoal dark mode
 extern Style Sty;                   // active style flags
@@ -46,11 +44,11 @@ extern Style Sty;                   // active style flags
 // Swap the active scheme: reassigns the color globals and re-applies ImGui style.
 void ApplyScheme(const Palette& p, const Style& s);
 
-// Convenience: 0 = Silver (Windows Standard), 1 = NeXT Night. Keeps the scheme
-// index → (palette, style) mapping in one place for the CLI flag and the dialog.
-inline void ApplyScheme(int index) {
-    if (index == 1) ApplyScheme(PaletteNight, Style{true});
-    else            ApplyScheme(Palette95, Style{false});
+// Convenience by Scheme id — keeps the id → (palette, style) mapping in one place
+// for the CLI flag and the Appearance dialog.
+inline void ApplyScheme(int scheme) {
+    if (scheme == SchemeNight) ApplyScheme(PaletteNight, Style{true});
+    else                       ApplyScheme(Palette95, Style{false});
 }
 
 } // namespace t95

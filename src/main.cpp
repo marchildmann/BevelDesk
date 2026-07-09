@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
     // with no manual atlas rebuild.
     LoadFonts(io, screenshot_mode ? 1.0f : PixelRatio(window));
     if (night) {
-        g_app.scheme = 1;
+        g_app.scheme = t95::SchemeNight;
         t95::ApplyScheme(g_app.scheme);
         g_app.desktop_color = t95::DESKTOP;   // dark desktop to match
     }
