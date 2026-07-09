@@ -11,6 +11,8 @@ namespace t95 {
 extern ImU32 FACE, LIGHT, HILIGHT, SHADOW, DKSHADOW;
 extern ImU32 TITLE_ACT, TITLE_ACT2, TITLE_INACT, TITLE_INACT2, TITLE_TEXT;
 extern ImU32 DESKTOP, WINBG, TEXT, GRAYTEXT, SEL, SEL_TEXT;
+extern ImU32 FOLDER, FOLDER_EDGE, FOLDER_SHADE;   // folder fill + outline + inner shade (muted in Night)
+extern ImU32 ACCENT;                // small UI accent (view-mode glyphs); steel in Night
 
 // ---- fixed colors: semantic, not chrome — never change per scheme ----------
 constexpr ImU32 BLACK    = IM_COL32(0, 0, 0, 255);
@@ -33,6 +35,7 @@ struct Palette {
     ImU32 face, light, hilight, shadow, dkshadow;
     ImU32 title_act, title_act2, title_inact, title_inact2, title_text;
     ImU32 desktop, winbg, text, graytext, sel, sel_text;
+    ImU32 folder, folder_edge, folder_shade, accent;
 };
 struct Style { bool chiseled = false; };   // NeXT-style black keyline (room to grow)
 

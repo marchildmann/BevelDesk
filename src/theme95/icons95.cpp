@@ -56,16 +56,15 @@ void RecycleBin32(ImDrawList* dl, ImVec2 p) {
 }
 
 void Folder32(ImDrawList* dl, ImVec2 p) {
-    const ImU32 FOLDER = IM_COL32(255, 255, 128, 255);
     // back tab
     dl->AddRectFilled(A(p, 1, 6), A(p, 14, 11), FOLDER);
-    dl->AddRect(A(p, 1, 6), A(p, 14, 11), DKYELLOW);
+    dl->AddRect(A(p, 1, 6), A(p, 14, 11), FOLDER_EDGE);
     // body
     dl->AddRectFilled(A(p, 1, 9), A(p, 31, 27), FOLDER);
-    dl->AddRect(A(p, 1, 9), A(p, 31, 27), DKYELLOW);
+    dl->AddRect(A(p, 1, 9), A(p, 31, 27), FOLDER_EDGE);
     dl->AddLine(A(p, 2, 10), A(p, 29, 10), HILIGHT);
     dl->AddLine(A(p, 2, 10), A(p, 2, 25), HILIGHT);
-    dl->AddLine(A(p, 2, 26), A(p, 30, 26), IM_COL32(160, 160, 0, 255));
+    dl->AddLine(A(p, 2, 26), A(p, 30, 26), FOLDER_SHADE);
 }
 
 void Document32(ImDrawList* dl, ImVec2 p) {
@@ -81,13 +80,12 @@ void Document32(ImDrawList* dl, ImVec2 p) {
 }
 
 void Folder14(ImDrawList* dl, ImVec2 p) {
-    const ImU32 FOLDER = IM_COL32(255, 255, 128, 255);
     // back tab
     dl->AddRectFilled(A(p, 0, 2), A(p, 6, 5), FOLDER);
-    dl->AddRect(A(p, 0, 2), A(p, 6, 5), DKYELLOW);
+    dl->AddRect(A(p, 0, 2), A(p, 6, 5), FOLDER_EDGE);
     // body
     dl->AddRectFilled(A(p, 0, 4), A(p, 13, 12), FOLDER);
-    dl->AddRect(A(p, 0, 4), A(p, 13, 12), DKYELLOW);
+    dl->AddRect(A(p, 0, 4), A(p, 13, 12), FOLDER_EDGE);
     dl->AddLine(A(p, 1, 5), A(p, 12, 5), HILIGHT);
 }
 
@@ -123,7 +121,7 @@ void UpFolderGlyph(ImDrawList* dl, ImVec2 p) {
 
 void LargeIconsGlyph(ImDrawList* dl, ImVec2 p) {
     // 2x2 grid of little "icons"
-    const ImU32 B = IM_COL32(0, 0, 255, 255);
+    const ImU32 B = ACCENT;
     dl->AddRectFilled(A(p, 5, 4), A(p, 10, 9), B);
     dl->AddRectFilled(A(p, 14, 4), A(p, 19, 9), B);
     dl->AddRectFilled(A(p, 5, 13), A(p, 10, 18), B);
@@ -142,7 +140,7 @@ void MiniDos14(ImDrawList* dl, ImVec2 p) {
 
 void DetailsGlyph(ImDrawList* dl, ImVec2 p) {
     // three rows: bullet + line
-    const ImU32 B = IM_COL32(0, 0, 255, 255);
+    const ImU32 B = ACCENT;
     for (int i = 0; i < 3; ++i) {
         float y = 5 + i * 5.0f;
         dl->AddRectFilled(A(p, 5, y), A(p, 8, y + 3), B);
