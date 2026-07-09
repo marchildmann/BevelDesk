@@ -65,6 +65,10 @@ struct DrawerTab {
     bool spawned = false;
     float scroll_px = 0;      // scrollback view offset (px from top)
     bool stick_bottom = true; // follow live output
+    // text selection (absolute line index over scrollback+screen, + column)
+    bool has_sel = false;
+    int sel_a_line = 0, sel_a_col = 0;   // anchor (drag start)
+    int sel_b_line = 0, sel_b_col = 0;   // cursor (drag end)
 };
 
 struct AppState {

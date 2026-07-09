@@ -70,9 +70,26 @@ static void CollectInput(TermGrid& t, std::string& out) {
                 out += (char)(1 + i);
 }
 
+// Absolute-line accessor over scrollback + live screen (null if out of range).
+static const TermCell* LineAt(TermGrid& t, int line) {
+    if (line < 0) return nullptr;
+    if (line < (int)t.scrollback.size()) return t.scrollback[(size_t)line].data();
+    int lr = line - (int)t.scrollback.size();
+    return (lr >= 0 && lr < t.rows) ? t.Row(lr) : nullptr;
+}
+
+// Normalize the selection so (l0,c0) precedes (l1,c1).
+static void SelRange(const DrawerTab& tab, int& l0, int& c0, int& l1, int& c1) {
+    l0 = tab.sel_a_line; c0 = tab.sel_a_col; l1 = tab.sel_b_line; c1 = tab.sel_b_col;
+    if (l0 > l1 || (l0 == l1 && c0 > c1)) {
+        int tl = l0; l0 = l1; l1 = tl;
+        int tc = c0; c0 = c1; c1 = tc;
+    }
+}
+
 // Draw the active tab into the sunken field [fmin, fmax]: size the grid to
-// fit, render scrollback + live screen, a Win95 scrollbar, and handle scroll
-// input (mouse wheel, Shift+PageUp/Down). got_output = shell printed this frame.
+// fit, render scrollback + live screen, a Win95 scrollbar, drag-select text,
+// Cmd+C/Cmd+V, and scroll input. got_output = shell printed this frame.
 static void RenderTerm(AppState& app, DrawerTab& tab, ImDrawList* dl,
                        ImVec2 fmin, ImVec2 fmax, bool focused, bool got_output) {
     ImFont* mono = FontMono ? FontMono : ImGui::GetFont();
@@ -115,19 +132,79 @@ static void RenderTerm(AppState& app, DrawerTab& tab, ImDrawList* dl,
     if (tab.scroll_px > max_scroll) tab.scroll_px = max_scroll;
     tab.stick_bottom = tab.scroll_px >= max_scroll - 0.5f;
 
-    // typing snaps back to the live screen
+    int first_line = (int)(tab.scroll_px / chh + 0.5f);
+    int total_lines = (int)t.scrollback.size() + t.rows;
+
+    // ---- drag-to-select over the grid ----
+    ImGui::SetCursorScreenPos(gmin);
+    ImGui::InvisibleButton("##termsel", ImVec2(gmax.x - gmin.x, gmax.y - gmin.y));
+    if (ImGui::IsItemActivated() || ImGui::IsItemActive()) {
+        int vr = (int)((io.MousePos.y - gmin.y) / chh);
+        if (vr < 0) vr = 0; if (vr >= t.rows) vr = t.rows - 1;
+        int col = (int)((io.MousePos.x - gmin.x) / cw + 0.5f);
+        if (col < 0) col = 0; if (col > t.cols) col = t.cols;
+        int line = first_line + vr;
+        if (ImGui::IsItemActivated()) {
+            tab.sel_a_line = tab.sel_b_line = line;
+            tab.sel_a_col = tab.sel_b_col = col;
+            tab.has_sel = false;
+        } else {
+            tab.sel_b_line = line; tab.sel_b_col = col;
+            if (line != tab.sel_a_line || col != tab.sel_a_col) tab.has_sel = true;
+        }
+    }
+    int sl0 = 0, sc0 = 0, sl1 = 0, sc1 = 0;
+    if (tab.has_sel) SelRange(tab, sl0, sc0, sl1, sc1);
+
+    // ---- clipboard: Cmd+C copies the selection, Cmd+V pastes to the shell ----
+    if (focused && io.KeySuper) {
+        if (tab.has_sel && ImGui::IsKeyPressed(ImGuiKey_C, false)) {
+            std::string s;
+            for (int L = sl0; L <= sl1; ++L) {
+                const TermCell* row = LineAt(t, L);
+                if (!row) continue;
+                int c0 = (L == sl0) ? sc0 : 0;
+                int c1 = (L == sl1) ? sc1 : t.cols;
+                std::string ln;
+                for (int c = c0; c < c1 && c < t.cols; ++c) EncodeUtf8(row[c].ch, ln);
+                while (!ln.empty() && ln.back() == ' ') ln.pop_back();
+                s += ln;
+                if (L < sl1) s += '\n';
+            }
+            ImGui::SetClipboardText(s.c_str());
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_V, false)) {
+            const char* clip = ImGui::GetClipboardText();
+            if (clip && *clip) tab.pty.Write(clip, std::strlen(clip));
+        }
+    }
+
+    // typing snaps back to the live screen (also clears the selection)
     if (focused) {
         std::string out; CollectInput(t, out);
         if (!out.empty()) {
             tab.pty.Write(out.data(), out.size());
             tab.scroll_px = max_scroll; tab.stick_bottom = true;
+            tab.has_sel = false;
         }
     }
 
     // ---- render scrollback + live screen ----
     ImGui::PushFont(mono);
-    int first_line = (int)(tab.scroll_px / chh + 0.5f);
-    int total_lines = (int)t.scrollback.size() + t.rows;
+    // selection highlight, behind text (default-bg cells let it show through)
+    if (tab.has_sel) {
+        for (int vr = 0; vr < t.rows; ++vr) {
+            int line = first_line + vr;
+            if (line < sl0 || line > sl1) continue;
+            int c0 = (line == sl0) ? sc0 : 0;
+            int c1 = (line == sl1) ? sc1 : t.cols;
+            if (c1 > c0) {
+                float ry = gmin.y + vr * chh;
+                dl->AddRectFilled(ImVec2(gmin.x + c0 * cw, ry),
+                                  ImVec2(gmin.x + c1 * cw, ry + chh), SEL);
+            }
+        }
+    }
     for (int vr = 0; vr < t.rows; ++vr) {
         int line = first_line + vr;
         if (line >= total_lines) break;
