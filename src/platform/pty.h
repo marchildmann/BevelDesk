@@ -12,6 +12,8 @@ struct Pty {
     // >0 bytes read, -1 = no data right now, 0 = EOF (shell exited).
     int Read(char* buf, size_t n);
     void Write(const char* s, size_t n);
+    // Tell the shell the terminal was resized (TIOCSWINSZ) so wrapping/TUIs work.
+    void Resize(int cols, int rows);
     // SIGHUP (then SIGKILL) the child and reap it.
     void Kill();
 

@@ -1,6 +1,7 @@
 #include "shell/taskbar.h"
 #include "shell/displayprops.h"
 #include "shell/dosprompt.h"
+#include "shell/drawer.h"
 #include "shell/about.h"
 #include "shell/run.h"
 #include <cstdlib>
@@ -134,7 +135,10 @@ static void DrawStartMenu(AppState& app, float taskbar_top) {
 
 void DrawTaskbarAndStartMenu(AppState& app) {
     ImGuiViewport* vp = ImGui::GetMainViewport();
+    // when the terminal drawer is open the taskbar rides up above it, becoming
+    // the drawer's handle/lid; the shell fills the strip below.
     float top = vp->Pos.y + vp->Size.y - TASKBAR_H;
+    if (app.drawer_open) top -= app.drawer_height;
     ImGui::SetNextWindowPos(ImVec2(vp->Pos.x, top));
     ImGui::SetNextWindowSize(ImVec2(vp->Size.x, TASKBAR_H));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -178,6 +182,18 @@ void DrawTaskbarAndStartMenu(AppState& app) {
         app.start_opened_this_frame = app.start_open;
     }
 
+    // ---- terminal-drawer toggle, right of Start ----
+    ImVec2 tb_min(sb_max.x + 4, btn_y), tb_max(tb_min.x + 26, btn_y + btn_h);
+    ImGui::SetCursorScreenPos(tb_min);
+    bool term_clicked = ImGui::InvisibleButton("##termtoggle", ImVec2(26, btn_h));
+    bool term_held = ImGui::IsItemActive() && ImGui::IsItemHovered();
+    bool term_down = term_held || app.drawer_open;
+    if (term_down) BevelPressed(dl, tb_min, tb_max);
+    else           BevelRaised(dl, tb_min, tb_max);
+    float to = term_down ? 1.0f : 0.0f;
+    icons95::MiniDos14(dl, ImVec2(tb_min.x + 6 + to, tb_min.y + 4 + to));
+    if (term_clicked) ToggleDrawer(app);
+
     // ---- clock well (far right) ----
     const float clock_w = 72;
     ImVec2 ck_min(mx.x - 4 - clock_w, btn_y), ck_max(mx.x - 4, btn_y + btn_h);
@@ -211,7 +227,7 @@ void DrawTaskbarAndStartMenu(AppState& app) {
         entries.push_back({ d->id, d->title.c_str(), &d->minimized, &d->focused,
                             &d->request_focus, icons95::MiniDos14 });
 
-    float tx = sb_max.x + 8;
+    float tx = tb_max.x + 8;   // start task buttons past the drawer toggle
     float avail = ck_min.x - 8 - tx;
     int n = (int)entries.size();
     if (n > 0 && avail > 40) {

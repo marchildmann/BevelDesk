@@ -21,6 +21,7 @@
 #include "shell/desktop.h"
 #include "shell/displayprops.h"
 #include "shell/dosprompt.h"
+#include "shell/drawer.h"
 #include "shell/run.h"
 #include "shell/explorer.h"
 #include "shell/shutdown.h"
@@ -116,6 +117,10 @@ static void MainLoopFrame(void* arg) {
         else if (dir < 0 && cur > 0) g_app.zoom = steps[cur - 1];
     }
 
+    // Ctrl+`  toggles the terminal drawer (dev muscle memory)
+    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_GraveAccent, false))
+        ToggleDrawer(g_app);
+
     // --demo sysmenu: pop the system menu on the focused explorer
     if (ctx.screenshot_mode && ctx.demo && std::strcmp(ctx.demo, "sysmenu") == 0 &&
         ctx.frame == 3 && !g_app.wins.empty())
@@ -140,6 +145,11 @@ static void MainLoopFrame(void* arg) {
     DrawExplorers(g_app);
     DrawDosPrompts(g_app);
     DrawTaskbarAndStartMenu(g_app);
+    // terminal drawer fills the strip below the (raised) taskbar
+    {
+        ImGuiViewport* mvp = ImGui::GetMainViewport();
+        DrawTerminalDrawer(g_app, mvp->Pos.y + mvp->Size.y - g_app.drawer_height);
+    }
     DrawDisplayProperties(g_app);
     DrawAbout(g_app);
     DrawRun(g_app);
@@ -282,13 +292,16 @@ int main(int argc, char** argv) {
     ImGui_ImplOpenGL3_Init(glsl_version);
     g_app.checker_tex = CreateCheckerTexture();
 
-    bool demo_dos = screenshot_mode && demo && std::strcmp(demo, "dos") == 0;
+    // slow demos (dos, drawer) need real wall-clock for the shell to print
+    bool demo_dos = screenshot_mode && demo &&
+                    (std::strcmp(demo, "dos") == 0 || std::strcmp(demo, "drawer") == 0);
     if (screenshot_mode) {
         // demo layout: two Explorer windows (verifies inactive vs active caption)
         g_app.OpenExplorer("/");
         const char* home = std::getenv("HOME");
         g_app.OpenExplorer(home ? home : "/");
-        if (demo_dos) OpenDosPrompt(g_app);
+        if (demo && std::strcmp(demo, "dos") == 0) OpenDosPrompt(g_app);
+        if (demo && std::strcmp(demo, "drawer") == 0) ToggleDrawer(g_app);
         if (demo && std::strcmp(demo, "start") == 0) g_app.force_start_open = true;
         if (demo && std::strcmp(demo, "max") == 0) g_app.wins.back().maximized = true;
         if (demo && std::strcmp(demo, "icons") == 0) g_app.wins.back().view_mode = 1;

@@ -61,6 +61,15 @@ void Pty::Write(const char* s, size_t n) {
     }
 }
 
+void Pty::Resize(int cols, int rows) {
+    if (fd < 0 || cols <= 0 || rows <= 0) return;
+    struct winsize ws;
+    std::memset(&ws, 0, sizeof(ws));
+    ws.ws_col = (unsigned short)cols;
+    ws.ws_row = (unsigned short)rows;
+    ioctl(fd, TIOCSWINSZ, &ws);
+}
+
 void Pty::Kill() {
     if (fd >= 0) { close(fd); fd = -1; }
     if (pid > 0) {
@@ -79,6 +88,7 @@ void Pty::Kill() {
 bool Pty::Spawn(int, int) { return false; }
 int Pty::Read(char*, size_t) { return 0; }
 void Pty::Write(const char*, size_t) {}
+void Pty::Resize(int, int) {}
 void Pty::Kill() {}
 
 #endif
