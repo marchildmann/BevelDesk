@@ -290,7 +290,8 @@ int main(int argc, char** argv) {
     // with no manual atlas rebuild.
     LoadFonts(io, screenshot_mode ? 1.0f : PixelRatio(window));
     if (night) {
-        t95::ApplyScheme(t95::PaletteNight, t95::Style{true});
+        g_app.scheme = 1;
+        t95::ApplyScheme(g_app.scheme);
         g_app.desktop_color = t95::DESKTOP;   // dark desktop to match
     }
 
@@ -321,6 +322,10 @@ int main(int argc, char** argv) {
             g_app.shutdown_opened_this_frame = true;
         }
         if (demo && std::strcmp(demo, "display") == 0) OpenDisplayProperties(g_app);
+        if (demo && std::strcmp(demo, "appearance") == 0) {
+            OpenDisplayProperties(g_app);
+            g_app.display_props_tab = 2;   // land on the Appearance tab
+        }
         if (demo && std::strcmp(demo, "about") == 0) OpenAbout(g_app);
         if (demo && std::strcmp(demo, "run") == 0) OpenRun(g_app);
     }

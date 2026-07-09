@@ -103,6 +103,9 @@ struct AppState {
     bool display_props_opened_now = false;
     ImU32 display_props_pending = IM_COL32(0, 128, 128, 255);
     ImU32 display_props_original = IM_COL32(0, 128, 128, 255); // for Cancel revert
+    int display_props_tab = 0;          // 0 Background · 2 Appearance (others decorative)
+    int scheme = 0;                     // 0 = Silver (Win95), 1 = NeXT Night
+    int display_props_scheme_orig = 0;  // Cancel-revert baseline for the scheme
 
     // About dialog
     bool about_open = false;

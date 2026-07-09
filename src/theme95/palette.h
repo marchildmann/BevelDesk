@@ -46,4 +46,11 @@ extern Style Sty;                   // active style flags
 // Swap the active scheme: reassigns the color globals and re-applies ImGui style.
 void ApplyScheme(const Palette& p, const Style& s);
 
+// Convenience: 0 = Silver (Windows Standard), 1 = NeXT Night. Keeps the scheme
+// index → (palette, style) mapping in one place for the CLI flag and the dialog.
+inline void ApplyScheme(int index) {
+    if (index == 1) ApplyScheme(PaletteNight, Style{true});
+    else            ApplyScheme(Palette95, Style{false});
+}
+
 } // namespace t95
