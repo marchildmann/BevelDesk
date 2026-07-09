@@ -3,9 +3,9 @@
 ## What works
 
 - Clean build from scratch on macOS (AppleClang, CMake FetchContent pulls
-  GLFW 3.4 / ImGui v1.91.9b / stb; zero compile errors, one upstream stb
+  GLFW 3.4 / ImGui 1.92.8 / stb; zero compile errors, one upstream stb
   `sprintf` deprecation warning). CMake is cross-platform (macOS / Linux /
-  Windows link blocks present); only macOS was actually exercised here.
+  Windows link blocks present) and CI builds all three natives + WASM.
 - Win95 desktop: teal background, procedurally drawn My Computer / Recycle
   Bin icons with select + double-click-to-open.
 - Custom window chrome (Theme95): 4px window frame with the correct
@@ -44,6 +44,13 @@
   256-color mapping, scrollback, OSC titles, DECCKM, DA/DSR replies;
   Start-menu launch, taskbar integration, multiple instances; the window
   closes itself when the shell exits.
+- **NeXT Night dark scheme**: a second `Palette` + `Style` (charcoal chrome,
+  chiseled black-keyline bevels, muted-steel active caption, muted-gold
+  folders, steel view-mode accent, light text) that every draw call reads via
+  the live `t95::` color globals. Runtime toggle in Display Properties ▸
+  Appearance (live-apply, OK/Cancel/Apply revert of both color and scheme);
+  `--night` boots into it. Win95 (Silver) verified byte-identical vs golden
+  after the palette became runtime-swappable.
 
 ## Known limitations
 
@@ -73,9 +80,12 @@
 
 ## Suggested next steps
 
-- **NeXTSTEP theme layer**: the Theme95 API (Edge/Bevel*/Chrome) is the
-  seam — add a `ThemeNeXT` with dark gray chrome, chiseled 2px bevels, and
-  the title-bar close/miniaturize squares, switchable at runtime.
+- **A third mood**: the Palette/Style seam is proven (Silver + NeXT Night) —
+  a new scheme is one more `Palette` table plus any `Style` flags, added to
+  the Appearance list. Per-scheme *desktop patterns* (a stippled dark ground)
+  and per-scheme icon sets would deepen a mood further.
+- Persist the chosen scheme / desktop color / zoom to a config file (currently
+  session-only).
 - Real MS Sans Serif-like bitmap font embedded as a compiled-in header
   (pixel-exact glyphs at 8pt, no AA).
 - Drive list for "My Computer"; context menus; renaming.

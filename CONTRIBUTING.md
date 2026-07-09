@@ -37,8 +37,9 @@ frame 9 (later for the pty demo, which needs real time to start a shell).
 ```
 src/app/        model only, no drawing — AppState, ExplorerWin, DosWin, TermGrid
 src/theme95/    the ENTIRE visual language, app-agnostic and reusable:
-                palette.h, bevel.*, widgets.*, window.* (chrome + system menu),
-                style.*, icons95.*  (umbrella: theme95.h)
+                palette.* (Palette/Style schemes + live color globals +
+                ApplyScheme), bevel.*, widgets.*, window.* (chrome + system
+                menu), style.*, icons95.*  (umbrella: theme95.h)
 src/shell/      the desktop environment, one file per surface: desktop, taskbar
                 (+ Start menu), explorer, dosprompt, shutdown, displayprops,
                 about, run
@@ -49,9 +50,16 @@ src/platform/   OS glue: font discovery, pty (forkpty), GL textures, screenshots
   draws inside `t95::BeginWindow95(Chrome&)`, add its window struct to `app.h`,
   and register a taskbar entry + a Start-menu item. `shutdown.cpp` (a dialog)
   and `dosprompt.cpp` (a full window) are the templates.
-- **A new theme** (e.g. NeXTSTEP): add a sibling of `theme95/` implementing the
-  same surface (palette / bevels / chrome). **Nothing in `shell/` may know how a
-  bevel is drawn** — that's the seam that makes re-theming possible.
+- **A new mood** (like NeXT Night): it is *not* a new directory or an `ITheme`.
+  Every draw call reads the live `t95::` color globals (`FACE`, `TITLE_ACT`, …),
+  so a scheme is just a `Palette` table + a small `Style` (currently one
+  `chiseled` bevel flag). Add a `PaletteFoo` (bootstrap the Silver globals from
+  it if it should be the default), give it a `Style`, list it in
+  `displayprops.cpp`'s Appearance list, and `ApplyScheme` swaps everything live.
+  **Nothing in `shell/` may hard-code a chrome color or know how a bevel is
+  drawn** — that's the seam that makes re-theming possible. Guardrail: the
+  Silver scheme must stay byte-identical (golden `--demo` screenshots) — a new
+  mood is purely additive.
 - All drawing is `ImDrawList` on `InvisibleButton`s. Icons are procedural.
   Anti-aliasing is globally off so pixels stay crisp.
 

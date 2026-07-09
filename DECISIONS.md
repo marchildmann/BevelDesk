@@ -98,3 +98,43 @@ Ambiguities resolved autonomously during the mission.
     `ALLOW_MEMORY_GROWTH`: a growable heap is a resizable ArrayBuffer, which
     recent Chrome's `TextDecoder` rejects (crashed opening the font). The
     pty/DOS prompt no-ops on web. Deployed to GitHub Pages via `pages.yml`.
+
+16. **Two moods, not a theme engine** (the "NeXT Night" mission). BevelDesk
+    gains a dark scheme *inspired by* NeXTSTEP's chiseled chrome — its own
+    design language, NOT a NeXTSTEP clone and explicitly NOT a Dock (the Win95
+    taskbar already launches + task-switches compactly; a Dock would be a
+    second launcher for the same job). Win95 and NeXTSTEP share one visual
+    philosophy (3D bevels, light from top-left, per-window chrome), so a dark
+    mode is a *palette + bevel-style* variation, not a shell rewrite. We
+    deliberately stopped at two curated moods rather than building a general
+    ITheme abstraction.
+16a. **The theming mechanism** (kept lightweight on purpose). The chrome colors
+    that were `constexpr` became reassignable `extern ImU32` globals in
+    `theme95/palette.*`; every draw call reads them unchanged. Two `Palette`
+    tables (`Palette95`, `PaletteNight`) plus a small `Style` (currently one
+    `chiseled` flag) are the whole surface; `ApplyScheme(const Palette&, const
+    Style&)` swaps them and re-derives the ImGui style. The live globals
+    *bootstrap from* `Palette95` (defined first in the same TU) so Silver needs
+    no runtime setup and there is one source of truth per color. Semantic,
+    non-chrome colors (BLACK/GREEN/NAVY) stay `constexpr`.
+16b. **Win95 stays byte-identical** (Phase 2 guardrail). Converting the palette
+    to runtime globals is behavior-preserving: golden screenshots of every
+    `--demo` state diff to zero against Silver except the live taskbar clock.
+    The one folder-icon shade line that was a distinct olive (`160,160,0`, not
+    the `128,128,0` outline) got its own themeable slot (`FOLDER_SHADE`) rather
+    than collapsing into `FOLDER_EDGE`, precisely to keep Silver identical.
+16c. **NeXT Night is BevelDesk's own dark, not "inverted Win95".** Charcoal
+    chrome (#3C3C3C face), chiseled bevels (a black keyline + a 1px 3D edge,
+    vs Win95's two-edge bevel), a muted-steel active caption (so focus reads
+    without a loud gradient), muted-gold folders and a steel view-mode accent
+    (the neon VGA yellow/blue looked garish on charcoal), and light text.
+    Icon colors (folders, view glyphs, the small accent) are themeable so they
+    are calm in Night without touching Silver.
+16d. **Runtime toggle lives in Display Properties ▸ Appearance** (the natural
+    home; the four-tab strip already existed). Selecting a scheme in the
+    Appearance list live-applies via `ApplyScheme`; OK commits, Cancel/Esc/X
+    revert both the background color and the scheme to their pre-dialog state.
+    Switching scheme moves the desktop to the new scheme's *default* background
+    only if it was still on the old default — a background the user
+    deliberately picked is preserved across the switch. `--night` boots
+    straight into the dark scheme.

@@ -4,17 +4,27 @@
 [![release](https://img.shields.io/github/v/release/marchildmann/BevelDesk)](https://github.com/marchildmann/BevelDesk/releases/latest)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**A Windows 95–style desktop environment that actually works — built entirely
-with Dear ImGui's DrawList API.**
+**A beveled desktop environment that actually works — built entirely with Dear
+ImGui's DrawList API. One binary, two moods: silver *Windows 95* and dark
+*NeXT Night*, switchable at runtime.**
 
 ### ▶ [Try the live demo in your browser](https://marchildmann.github.io/BevelDesk/) &nbsp;(WebAssembly, no install)
 
-Teal desktop, beveled chrome, a real file manager over your actual filesystem,
-and an MS-DOS Prompt running a *live shell* (your zsh) through a pty — every
-bevel, caption bar, scrollbar and icon drawn by hand, pixel by pixel. No stock
-ImGui styling, no image assets, no web views.
+Beveled chrome, a real file manager over your actual filesystem, and an MS-DOS
+Prompt running a *live shell* (your zsh) through a pty — every bevel, caption
+bar, scrollbar and icon drawn by hand, pixel by pixel. No stock ImGui styling,
+no image assets, no web views.
 
-![BevelDesk](screenshot.png)
+BevelDesk borrows from the two great beveled desktops — Win95 and NeXTSTEP —
+which share one visual philosophy (3D edges, light from the top-left, per-window
+chrome). So the dark **NeXT Night** mode isn't a reskin engine; it's a second
+`Palette` + `Style` the same drawing code reads. Flip it in Display Properties ▸
+Appearance and the whole desktop — chrome, dialogs, taskbar, icons — repaints
+live. It's BevelDesk's own dark design language, not a NeXTSTEP replica.
+
+| Windows 95 | NeXT Night |
+|---|---|
+| ![Silver](screenshot.png) | ![Night](screenshot-night.png) |
 
 ## Features
 
@@ -44,9 +54,15 @@ ImGui styling, no image assets, no web views.
 - **UI zoom** — **Ctrl/Cmd + mouse-wheel** (or `+` / `-` / `0` on a US
   keyboard) scales the whole desktop through 1×–3×, with fonts re-rasterized
   at each level so text stays crisp (no bitmap blur). Handy on 4K/5K displays.
+- **Two moods, one binary** — a silver **Windows 95** scheme and a dark
+  **NeXT Night** scheme (charcoal chrome, chiseled black-keyline bevels,
+  muted-gold folders, a steel active caption). Everything shared; the two
+  differ only by a `Palette` (colors) and a small `Style` (chiseled vs. Win95
+  bevel). A third mood would be additive — fill one more `Palette`.
 - **Display Properties** (Start ▸ Settings) — recolor the desktop from the
-  classic 16-color picker, with a live monitor preview, OK/Cancel semantics
-  included.
+  classic 16-color picker with a live monitor preview, or switch scheme on the
+  **Appearance** tab; live-apply with OK/Cancel/Apply revert semantics. Start
+  in the dark scheme directly with `--night`.
 - **Crisp on Retina** — native-resolution rendering with the UI font
   (Tahoma / Microsoft Sans Serif / DejaVu, probed from your system)
   rasterized at monitor density. Fixed 96-dpi metrics, like the original.
@@ -101,9 +117,10 @@ build\Release\beveldesk.exe
 | `./build/beveldesk` | normal 1024×768 window (`--windowed WxH` picks another size) |
 | `./build/beveldesk --fullscreen` | total immersion — no host chrome; exit via Start ▸ Shut Down… or Cmd/Ctrl+Q |
 | `./build/beveldesk --borderless` | square-cornered undecorated window; drag it by the taskbar's empty area, Cmd+M minimizes |
+| `./build/beveldesk --night` | boot straight into the dark NeXT Night scheme (toggle live in Display Properties ▸ Appearance) |
 | `./build/beveldesk --zoom 1.5` | start at a UI zoom level (also Ctrl/Cmd +/-/0 at runtime) |
 | `./build/beveldesk --screenshot [out.png]` | headless QA: renders 10 frames, writes a PNG, exits |
-| `…--screenshot s.png --demo start\|max\|nav\|icons\|shutdown\|dos\|sysmenu` | screenshot specific UI states (`dos` runs a live shell for ~1.4 s first) |
+| `…--screenshot s.png --demo start\|max\|nav\|icons\|shutdown\|dos\|sysmenu\|appearance` | screenshot specific UI states (`dos` runs a live shell for ~1.4 s first; `appearance` opens the scheme picker) |
 
 Double-click **My Computer** to browse `/`, **Recycle Bin** for `~/.Trash`.
 Start ▸ **MS-DOS Prompt** opens a shell. Inside Explorer: double-click folders
@@ -115,20 +132,23 @@ to navigate, click column headers to sort, toolbar buttons switch view modes.
 src/
   main.cpp            entry point: GLFW/ImGui boot, main loop, CLI flags
   app/                the model — AppState, windows, terminal emulator (no drawing)
-  theme95/            the Windows 95 visual language (reusable, app-agnostic)
-    palette.h           system colors + metrics
-    bevel.*             the four 3D edge conventions + dither fill
+  theme95/            the beveled visual language (reusable, app-agnostic)
+    palette.*           Palette + Style schemes (Silver / NeXT Night), live
+                        color globals, ApplyScheme(); metrics
+    bevel.*             the four 3D edge conventions (+ chiseled variant) + dither
     widgets.*           Button, Radio, ToolButton, CaptionButton, ScrollBarV
     window.*            window chrome, system menu, dialogs
-    style.* icons95.*   global style; procedural icons
+    style.* icons95.*   global ImGui style; procedural icons
   shell/              the desktop environment, one component per surface
-    desktop.* taskbar.* explorer.* dosprompt.* shutdown.*
+    desktop.* taskbar.* explorer.* dosprompt.* shutdown.* displayprops.*
   platform/           OS glue: fonts, pty (forkpty), GL textures, screenshots
 ```
 
-A future theme (NeXTSTEP, System 7, CDE…) slots in as a sibling of
-`theme95/`; a new program (Notepad, Minesweeper…) is one new `shell/`
-component drawing inside `t95::BeginWindow95`.
+Adding a mood is additive: fill one more `Palette` (16-odd colors) plus a
+`Style` flag or two and add it to the Appearance list — every draw call reads
+the live `t95::` color globals unchanged, so nothing else moves. A new program
+(Notepad, Minesweeper…) is one new `shell/` component drawing inside
+`t95::BeginWindow95`.
 
 ## WebAssembly build
 
