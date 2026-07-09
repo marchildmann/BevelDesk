@@ -67,7 +67,7 @@ void DrawDesktop(AppState& app) {
         ImVec2 tp(cell.x + (cell_sz.x - ts.x) * 0.5f, cell.y + 37);
         if (app.desktop_selected == i)
             dl->AddRectFilled(ImVec2(tp.x - 2, tp.y - 1), ImVec2(tp.x + ts.x + 2, tp.y + ts.y + 1), SEL);
-        dl->AddText(tp, HILIGHT, icons[i].label);
+        dl->AddText(tp, TITLE_TEXT, icons[i].label);   // white in Silver, light in Night
     }
 
     if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !any_icon_hovered)

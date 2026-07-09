@@ -199,6 +199,7 @@ int main(int argc, char** argv) {
     bool screenshot_mode = false;
     bool fullscreen = false;
     bool borderless = false;
+    bool night = false;
     int win_w = 1024, win_h = 768;
     const char* screenshot_path = "screenshot.png";
     const char* demo = nullptr; // "start" | "max" | "nav" | "icons" | "shutdown" | "dos" | "sysmenu"
@@ -219,6 +220,8 @@ int main(int argc, char** argv) {
             borderless = true;   // square corners: no macOS title bar / rounding
         } else if (std::strcmp(argv[i], "--fullscreen") == 0) {
             fullscreen = true;   // total immersion: no host chrome at all
+        } else if (std::strcmp(argv[i], "--night") == 0) {
+            night = true;        // preview the NeXT Night scheme (Phase 3 tuning)
         } else if (std::strcmp(argv[i], "--zoom") == 0 && i + 1 < argc) {
             g_app.zoom = (float)std::atof(argv[++i]);    // startup zoom (QA/pref)
             if (g_app.zoom < 1.0f) g_app.zoom = 1.0f;
@@ -286,6 +289,10 @@ int main(int argc, char** argv) {
     // whatever density DisplayFramebufferScale implies, so zoom stays crisp
     // with no manual atlas rebuild.
     LoadFonts(io, screenshot_mode ? 1.0f : PixelRatio(window));
+    if (night) {
+        t95::ApplyScheme(t95::PaletteNight, t95::Style{true});
+        g_app.desktop_color = t95::DESKTOP;   // dark desktop to match
+    }
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 #ifdef __EMSCRIPTEN__
