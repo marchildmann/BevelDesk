@@ -168,21 +168,26 @@ void DrawTerminalDrawer(AppState& app, float drawer_top) {
         bool active = (i == app.drawer_active);
         float tw = 104;
         ImVec2 t0(tabx, taby), t1(tabx + tw, taby + th);
-        ImGui::SetCursorScreenPos(t0);
-        ImGui::PushID(app.drawer_tabs[i]->id);
-        bool clicked = ImGui::InvisibleButton("##tab", ImVec2(tw, th));
-        ImGui::PopID();
-        if (active) BevelPressed(dl, t0, t1); else BevelRaised(dl, t0, t1);
-        float o = active ? 1.0f : 0.0f;
-        char label[24]; std::snprintf(label, sizeof(label), "Terminal %d", app.drawer_tabs[i]->id);
-        ImVec4 clip(t0.x + 6, t0.y, t1.x - 18, t1.y);
-        dl->AddText(nullptr, 0.0f, ImVec2(t0.x + 7 + o, t0.y + 4 + o), TEXT, label, nullptr, 0.0f, &clip);
-        // per-tab close box
         ImVec2 xb0(t1.x - 16, t0.y + 4), xb1(t1.x - 5, t0.y + 15);
+        int id = app.drawer_tabs[i]->id;
+
+        // Submit the small close box FIRST so it wins the click over the tab
+        // body it overlaps (gotcha: earlier item claims the press).
         ImGui::SetCursorScreenPos(xb0);
-        ImGui::PushID(1000 + app.drawer_tabs[i]->id);
+        ImGui::PushID(2000 + id);
         bool xclick = ImGui::InvisibleButton("##x", ImVec2(11, 11));
         ImGui::PopID();
+        // tab body second
+        ImGui::SetCursorScreenPos(t0);
+        ImGui::PushID(id);
+        bool clicked = ImGui::InvisibleButton("##tab", ImVec2(tw, th));
+        ImGui::PopID();
+
+        if (active) BevelPressed(dl, t0, t1); else BevelRaised(dl, t0, t1);
+        float o = active ? 1.0f : 0.0f;
+        char label[24]; std::snprintf(label, sizeof(label), "Terminal %d", id);
+        ImVec4 clip(t0.x + 6, t0.y, t1.x - 18, t1.y);
+        dl->AddText(nullptr, 0.0f, ImVec2(t0.x + 7 + o, t0.y + 4 + o), TEXT, label, nullptr, 0.0f, &clip);
         dl->AddLine(ImVec2(xb0.x + 2, xb0.y + 2), ImVec2(xb1.x - 2, xb1.y - 2), TEXT);
         dl->AddLine(ImVec2(xb1.x - 2, xb0.y + 2), ImVec2(xb0.x + 2, xb1.y - 2), TEXT);
         if (xclick) close_tab = i;
