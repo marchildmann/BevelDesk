@@ -10,6 +10,7 @@ out/
 .vscode/
 .idea/
 .claude/
+CLAUDE.md
 .cache/
 compile_commands.json
 
