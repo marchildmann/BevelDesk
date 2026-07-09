@@ -21,6 +21,7 @@
 #include "shell/desktop.h"
 #include "shell/displayprops.h"
 #include "shell/dosprompt.h"
+#include "shell/macdemo.h"
 #include "shell/run.h"
 #include "shell/explorer.h"
 #include "shell/shutdown.h"
@@ -136,14 +137,19 @@ static void MainLoopFrame(void* arg) {
         g_app.dos_wins.back()->pty.Write(cmd, std::strlen(cmd));
     }
 
-    DrawDesktop(g_app);
-    DrawExplorers(g_app);
-    DrawDosPrompts(g_app);
-    DrawTaskbarAndStartMenu(g_app);
-    DrawDisplayProperties(g_app);
-    DrawAbout(g_app);
-    DrawRun(g_app);
-    DrawShutdownDialog(g_app);   // last: its fade covers everything
+    // classic Mac System-1 spike (issue #1): replaces the Win95 shell entirely
+    if (ctx.demo && std::strcmp(ctx.demo, "mac") == 0) {
+        DrawMacDesktop(g_app);
+    } else {
+        DrawDesktop(g_app);
+        DrawExplorers(g_app);
+        DrawDosPrompts(g_app);
+        DrawTaskbarAndStartMenu(g_app);
+        DrawDisplayProperties(g_app);
+        DrawAbout(g_app);
+        DrawRun(g_app);
+        DrawShutdownDialog(g_app);   // last: its fade covers everything
+    }
 
     // Cmd+Q (macOS) / Ctrl+Q exits — no effect in the browser.
     bool dos_focused = false;

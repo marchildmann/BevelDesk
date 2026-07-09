@@ -71,6 +71,7 @@ add_executable(beveldesk
   src/shell/displayprops.cpp
   src/shell/about.cpp
   src/shell/run.cpp
+  src/shell/macdemo.cpp
   src/platform/platform.cpp
   src/platform/pty.cpp
   src/platform/stb_impl.cpp
